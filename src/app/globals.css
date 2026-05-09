@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+@theme {
+  /* ─── Neutrals ──────────────────────────────────────────────────── */
+  --color-bg: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f4f5;
+  --color-border: #e4e4e7;
+  --color-border-strong: #d4d4d8;
+  --color-fg: #09090b;
+  --color-fg-muted: #52525b;
+  --color-fg-subtle: #71717a;
+
+  /* ─── Accent (single, desaturated indigo) ───────────────────────── */
+  --color-accent: #5b5bd6;
+  --color-accent-hover: #4f4fc4;
+  --color-accent-soft: #eef0ff;
+  --color-accent-fg: #ffffff;
+
+  /* ─── Lead temperature ──────────────────────────────────────────── */
+  --color-hot: #e11d48;
+  --color-hot-soft: #ffe4e6;
+  --color-warm: #f59e0b;
+  --color-warm-soft: #fef3c7;
+  --color-cold: #3b82f6;
+  --color-cold-soft: #dbeafe;
+
+  /* ─── Semantic ──────────────────────────────────────────────────── */
+  --color-success: #16a34a;
+  --color-success-soft: #dcfce7;
+  --color-warning: #d97706;
+  --color-warning-soft: #fef3c7;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fee2e2;
+  --color-info: #0ea5e9;
+  --color-info-soft: #e0f2fe;
+
+  /* ─── Type ──────────────────────────────────────────────────────── */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  --text-xs: 0.75rem; /* 12 */
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.8125rem; /* 13 */
+  --text-sm--line-height: 1.125rem;
+  --text-base: 0.875rem; /* 14 — default body */
+  --text-base--line-height: 1.25rem;
+  --text-md: 1rem; /* 16 */
+  --text-md--line-height: 1.5rem;
+  --text-lg: 1.125rem; /* 18 */
+  --text-lg--line-height: 1.625rem;
+  --text-xl: 1.5rem; /* 24 */
+  --text-xl--line-height: 1.875rem;
+  --text-2xl: 2rem; /* 32 */
+  --text-2xl--line-height: 2.375rem;
+  --text-3xl: 2.5rem; /* 40 */
+  --text-3xl--line-height: 2.875rem;
+
+  --tracking-tight: -0.01em;
+  --tracking-tighter: -0.02em;
+
+  /* ─── Radius ────────────────────────────────────────────────────── */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* ─── Shadow ────────────────────────────────────────────────────── */
+  --shadow-xs: 0 1px 2px 0 rgb(9 9 11 / 0.04);
+  --shadow-sm: 0 1px 2px 0 rgb(9 9 11 / 0.05),
+    0 1px 1px 0 rgb(9 9 11 / 0.03);
+  --shadow-md: 0 4px 12px -2px rgb(9 9 11 / 0.06),
+    0 2px 4px -2px rgb(9 9 11 / 0.04);
+  --shadow-lg: 0 12px 32px -8px rgb(9 9 11 / 0.10),
+    0 4px 8px -4px rgb(9 9 11 / 0.05);
+}
+
+/* ─── Base ────────────────────────────────────────────────────────── */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv11", "ss01", "ss03";
+}
+
+/* Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 9999px;
+  border: 2px solid var(--color-bg);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-fg-subtle);
+}
+
+/* Focus ring (project-wide, on :focus-visible only) */
+*:focus {
+  outline: none;
+}
+*:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 0;
+  border-radius: inherit;
+}
+
+/* Selection */
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-fg);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
