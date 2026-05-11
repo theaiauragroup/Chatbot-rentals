@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { LayoutGrid, Rows3 } from "lucide-react";
+import { LayoutGrid, Rows3, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { SearchInput } from "@/components/data/SearchInput";
