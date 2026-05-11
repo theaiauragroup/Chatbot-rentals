@@ -184,6 +184,7 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
       sessionId,
       startedAt: localStorage.getItem('chatStartedAt') || new Date().toISOString(),
       message: textContent,
+      history: [],
       hasAudio: !!audioBase64,
       audioData: audioBase64 || '',
       hasImage: !!imageBase64,
@@ -204,7 +205,7 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
-    return data.reply || data.message || 'I apologize, I had trouble responding.';
+    return data.reply || data.message || data.output || data.text || 'I apologize, I had trouble responding.';
   };
 
   const sendMessage = async () => {
