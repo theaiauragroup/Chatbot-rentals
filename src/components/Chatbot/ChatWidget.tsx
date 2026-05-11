@@ -109,11 +109,6 @@ interface Message {
   audio?: string;
 }
 
-interface HistoryEntry {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
 interface ChatWidgetProps {
   isOpen: boolean;
   onToggle: () => void;
@@ -134,7 +129,6 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const historyRef = useRef<HistoryEntry[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -157,12 +151,6 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
           timestamp: new Date(m.timestamp),
         }));
         setMessages(restored);
-        historyRef.current = restored
-          .filter(m => m.id !== 'welcome' && !m.audio)
-          .map(m => ({
-            role: m.role === 'user' ? 'user' : 'assistant',
-            content: m.content,
-          }));
       } catch {
         setWelcome();
       }
@@ -196,7 +184,6 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
       sessionId,
       startedAt: localStorage.getItem('chatStartedAt') || new Date().toISOString(),
       message: textContent,
-      history: historyRef.current,
       hasAudio: !!audioBase64,
       audioData: audioBase64 || '',
       hasImage: !!imageBase64,
@@ -228,12 +215,10 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
     const userMessage: Message = { id: `msg_${Date.now()}`, role: 'user', content: textContent || (imgBase64 ? '[Image]' : ''), timestamp: new Date(), image: imgBase64 };
     setMessages(prev => [...prev, userMessage]);
     setInputValue(''); setSelectedImage(null); setImagePreview(null); setIsLoading(true);
-    historyRef.current = [...historyRef.current, { role: 'user', content: textContent || '[Image]' }];
     try {
       const botText = await sendToN8n(textContent, undefined, imgBase64);
       const botMessage: Message = { id: `msg_${Date.now()}_bot`, role: 'bot', content: botText, timestamp: new Date() };
       setMessages(prev => [...prev, botMessage]);
-      historyRef.current = [...historyRef.current, { role: 'assistant', content: botText }];
     } catch (error) {
       setMessages(prev => [...prev, { id: `msg_${Date.now()}_error`, role: 'bot', content: 'I\'m having a bit of trouble. Please try again.', timestamp: new Date() }]);
     } finally { setIsLoading(false); }
@@ -271,14 +256,12 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
         const voiceMsgId = `msg_${Date.now()}`;
         setMessages(prev => [...prev, { id: voiceMsgId, role: 'user', content: 'Voice message', timestamp: new Date(), audio: audioUrl }]);
         setIsLoading(true);
-        historyRef.current = [...historyRef.current, { role: 'user', content: '[Voice message]' }];
         try {
           const audioBase64 = await new Promise<string>((res, rej) => {
             const r = new FileReader(); r.onloadend = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(audioBlob);
           });
           const botText = await sendToN8n('[Voice message]', audioBase64);
           setMessages(prev => [...prev, { id: `${voiceMsgId}_bot`, role: 'bot', content: botText, timestamp: new Date() }]);
-          historyRef.current = [...historyRef.current, { role: 'assistant', content: botText }];
         } catch {
           setMessages(prev => [...prev, { id: `${voiceMsgId}_err`, role: 'bot', content: 'Processing error. Try typing.', timestamp: new Date() }]);
         } finally { setIsLoading(false); }
