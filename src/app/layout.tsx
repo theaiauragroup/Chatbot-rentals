@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   description: "Lead capture and management dashboard",
 };
 
+import ChatWidgetWrapper from "@/components/Chatbot/ChatWidgetWrapper";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,6 +33,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-bg text-fg font-sans text-base">
         <Toaster>{children}</Toaster>
+        <ChatWidgetWrapper />
       </body>
     </html>
   );
