@@ -19,7 +19,8 @@ type Action =
   | { type: "set_temperature"; leadId: ID; temperature: LeadTemperature }
   | { type: "set_outcome"; leadId: ID; outcome: LeadOutcome }
   | { type: "set_notes"; leadId: ID; notes: string }
-  | { type: "add_booking_range"; vehicleId: ID; range: BookingRange };
+  | { type: "add_booking_range"; vehicleId: ID; range: BookingRange }
+  | { type: "set_leads"; leads: Lead[] };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -59,6 +60,11 @@ function reducer(state: State, action: Action): State {
             : v
         ),
       };
+    case "set_leads":
+      return {
+        ...state,
+        leads: action.leads,
+      };
   }
 }
 
@@ -71,6 +77,7 @@ interface ContextValue extends State {
   setOutcome: (leadId: ID, o: LeadOutcome) => void;
   setNotes: (leadId: ID, notes: string) => void;
   addBookingRange: (vehicleId: ID, range: BookingRange) => void;
+  setLeads: (leads: Lead[]) => void;
 }
 
 const Ctx = React.createContext<ContextValue | null>(null);
@@ -100,6 +107,7 @@ export function LeadsProvider({
         dispatch({ type: "set_notes", leadId, notes }),
       addBookingRange: (vehicleId, range) =>
         dispatch({ type: "add_booking_range", vehicleId, range }),
+      setLeads: (leads) => dispatch({ type: "set_leads", leads }),
     }),
     [state]
   );

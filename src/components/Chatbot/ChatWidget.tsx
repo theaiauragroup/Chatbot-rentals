@@ -290,6 +290,10 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
   };
 
   const sendMessage = async () => {
+    if (isRecording) {
+      stopRecording();
+      return;
+    }
     if ((!inputValue.trim() && !selectedImage) || isLoading || !sessionId) return;
 
     const textContent = inputValue.trim();
@@ -368,6 +372,7 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // ─── MediaRecorder — records raw audio and sends to webhook ─────────────────
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -408,6 +413,7 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
           recordingTimerRef.current = null;
         }
         setRecordingSeconds(0);
+        setIsRecording(false);
 
         // Capture chunks NOW before anything clears them
         const chunks = [...audioChunksRef.current];
@@ -421,7 +427,7 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
         const finalMimeType = mediaRecorder.mimeType || 'audio/webm';
         const audioBlob = new Blob(chunks, { type: finalMimeType });
 
-        // Show the voice bubble in the chat UI with a playable audio player
+        // Show the voice bubble in the chat UI
         const audioUrl = URL.createObjectURL(audioBlob);
         const voiceMsgId = `msg_${Date.now()}`;
         const voiceMsg: Message = {
@@ -434,7 +440,7 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
         setMessages(prev => [...prev, voiceMsg]);
         setIsLoading(true);
 
-        // Add to conversation history as text so n8n context stays clean
+        // Add to conversation history
         historyRef.current = [
           ...historyRef.current,
           { role: 'user', content: '[Voice message]' },
@@ -455,7 +461,7 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
             reader.readAsDataURL(audioBlob);
           });
 
-          // Send to n8n — Whisper will transcribe it, AI will reply in text
+          // Send to n8n
           const botText = await sendToN8n('[Voice message]', audioBase64);
 
           const botMsg: Message = {
@@ -500,7 +506,7 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
     }
@@ -508,6 +514,7 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
       clearInterval(recordingTimerRef.current);
       recordingTimerRef.current = null;
     }
+    setRecordingSeconds(0);
   };
 
   // Format seconds as m:ss
@@ -521,7 +528,7 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
     return (
       <button
         onClick={onToggle}
-        className="fixed bottom-4 right-4 w-12 h-12 md:w-14 md:h-14 bg-accent text-white rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110 flex items-center justify-center z-50"
+        className="fixed bottom-4 right-4 w-14 h-14 bg-accent text-white rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.18)] transition-all hover:scale-110 flex items-center justify-center z-50 border border-white/20"
         aria-label="Open chat"
       >
         <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
@@ -532,145 +539,125 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
   return (
     <div className="fixed inset-x-[5%] top-[15%] bottom-[15%] md:inset-auto md:bottom-4 md:right-4 w-[90%] md:w-80 h-[70%] md:h-[500px] bg-white md:rounded-xl rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden transition-all duration-300 ease-in-out">
       {/* Header */}
-      <div className="bg-accent text-white p-4 md:p-3 flex items-center justify-between">
-        <div className="flex items-center space-x-3 md:space-x-2">
-          <div className="w-10 h-10 md:w-8 md:h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-            <span className="text-lg md:text-base">🤖</span>
-          </div>
-          <div>
-            <h3 className="font-semibold text-sm md:text-sm">
-              {process.env.NEXT_PUBLIC_BUSINESS_NAME || 'DriveEasy Car Rentals'}
-            </h3>
-            <p className="text-[10px] md:text-xs text-white text-opacity-80">Rayan · Online now</p>
-          </div>
+      <div className="bg-white border-b border-gray-100 p-4 flex items-center justify-between">
+        <div>
+          <h3 className="font-bold text-sm text-gray-800 tracking-tight leading-none">
+            {process.env.NEXT_PUBLIC_BUSINESS_NAME || 'DriveEasy Car Rentals'}
+          </h3>
+          <p className="text-[10px] text-gray-400 font-medium mt-1.5 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+            Online Assistant
+          </p>
         </div>
-        <div className="flex items-center space-x-2 md:space-x-1">
+        <div className="flex items-center gap-1">
           <button
             onClick={onToggle}
-            className="hover:bg-white/10 p-2 md:p-1.5 rounded-lg transition"
-            aria-label="Minimize chat"
+            className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg transition-colors"
+            aria-label="Minimize"
           >
-            <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
           <button
             onClick={onToggle}
-            className="hover:bg-white/10 p-2 md:p-1.5 rounded-lg transition"
-            aria-label="Close chat"
+            className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg transition-colors"
+            aria-label="Close"
           >
-            <X className="w-5 h-5 md:w-4 md:h-4" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50">
+      <div className="flex-1 overflow-y-auto p-5 space-y-6 bg-white">
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex items-start space-x-1.5 message-enter ${
-              message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
-            }`}
+            className={`flex w-full ${
+              message.role === 'user' ? 'justify-end' : 'justify-start'
+            } message-enter`}
           >
+            {/* Bubble Container */}
             <div
-              className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                message.role === 'user'
-                  ? 'bg-accent text-white'
-                  : 'bg-gray-800 text-white'
+              className={`flex flex-col max-w-[75%] ${
+                message.role === 'user' ? 'items-end' : 'items-start'
               }`}
             >
-              {message.role === 'user' ? (
-                <span className="text-xs">👤</span>
-              ) : (
-                <span className="text-xs">🤖</span>
-              )}
-            </div>
-            <div
-              className={`${
-                message.audio ? '' : 'max-w-[75%] rounded-xl px-3 py-1.5'
-              } ${
-                message.audio ? '' : message.role === 'user'
-                  ? 'bg-gray-100 text-gray-900 shadow-sm'
-                  : 'bg-white text-gray-800 shadow-sm'
-              }`}
-            >
-              {message.audio ? (
-                /* ── Voice message bubble ── */
-                <div className={`max-w-[75%] rounded-xl px-3 py-2 ${
-                  message.role === 'user' ? 'bg-gray-100 text-gray-900 shadow-sm' : 'bg-white text-gray-800 shadow-sm'
-                }`}>
-                  {/* Label row */}
-                  <div className={`flex items-center gap-1.5 mb-1.5 text-xs font-medium ${
-                    message.role === 'user' ? 'text-accent' : 'text-gray-500'
-                  }`}>
-                    <Mic className="w-3 h-3" />
-                    <span>Voice message</span>
+              <div
+                className={`px-4.5 py-3 rounded-2xl ${
+                  message.role === 'user'
+                    ? 'bg-gray-100 text-gray-800 rounded-tr-sm'
+                    : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
+                }`}
+              >
+                {message.audio ? (
+                  /* ── Minimal Voice message bubble ── */
+                  <div className="flex flex-col gap-2 min-w-[210px] py-1">
+                    <div className="flex items-center gap-2 px-1">
+                      <div className="size-5 rounded-full bg-accent/10 flex items-center justify-center">
+                        <Mic className="size-3 text-accent" />
+                      </div>
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Voice Note</span>
+                    </div>
+                    <audio
+                      controls
+                      src={message.audio}
+                      className="h-9 w-full rounded-lg"
+                    >
+                      Your browser does not support the audio element.
+                    </audio>
                   </div>
+                ) : (
+                  <div className="space-y-2">
+                    {/* User-uploaded image */}
+                    {message.image && (
+                      <div className="overflow-hidden rounded-lg mb-1">
+                        <img
+                          src={message.image}
+                          alt="Uploaded"
+                          className="max-w-full h-auto cursor-pointer"
+                          onClick={() => window.open(message.image, '_blank')}
+                        />
+                      </div>
+                    )}
 
-                  {/* Native audio player — styled to fit the bubble */}
-                  <audio
-                    controls
-                    preload="metadata"
-                    style={{ height: '32px', width: '200px', maxWidth: '100%' }}
-                  >
-                    <source src={message.audio} type="audio/webm;codecs=opus" />
-                    <source src={message.audio} type="audio/webm" />
-                    <source src={message.audio} type="audio/ogg" />
-                    <source src={message.audio} type="audio/wav" />
-                    Your browser does not support audio playback.
-                  </audio>
+                    {/* Render message content */}
+                    <div className="text-[13px] leading-relaxed">
+                      <MessageContent
+                        content={message.content}
+                        isUser={message.role === 'user'}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
 
-                  {/* Timestamp */}
-                  <p className={`text-xs mt-1.5 ${
-                    message.role === 'user' ? 'text-gray-500' : 'text-gray-400'
-                  }`}>
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {/* User-uploaded image (from the image picker) */}
-                  {message.image && (
-                    <img
-                      src={message.image}
-                      alt="Uploaded"
-                      className="rounded-lg mb-1.5 max-w-full h-auto"
-                    />
-                  )}
-
-                  {/* Render message content — images, links, bold, line breaks */}
-                  <MessageContent
-                    content={message.content}
-                    isUser={message.role === 'user'}
-                  />
-
-                  <p
-                    className={`text-xs mt-1 ${
-                      message.role === 'user' ? 'text-gray-500' : 'text-gray-400'
-                    }`}
-                  >
-                    {message.timestamp.toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </p>
-                </>
-              )}
+              {/* Timestamp & Status */}
+              <div className="flex items-center gap-1 mt-1 px-1">
+                <span className="text-[10px] text-gray-400 font-medium">
+                  {message.timestamp.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+                {message.role === 'user' && (
+                  <svg className="w-3 h-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
             </div>
           </div>
         ))}
 
         {isLoading && (
-          <div className="flex items-start space-x-1.5">
-            <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center">
-              <span className="text-xs">🤖</span>
-            </div>
-            <div className="bg-white rounded-xl px-3 py-2 shadow-sm">
-              <div className="flex space-x-1">
-                <div className="w-1.5 h-1.5 bg-gray-400 rounded-full typing-dot"></div>
-                <div className="w-1.5 h-1.5 bg-gray-400 rounded-full typing-dot"></div>
-                <div className="w-1.5 h-1.5 bg-gray-400 rounded-full typing-dot"></div>
+          <div className="flex items-start">
+            <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-sm px-4 py-2.5">
+              <div className="flex space-x-1.5">
+                <div className="w-1.5 h-1.5 bg-gray-200 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                <div className="w-1.5 h-1.5 bg-gray-200 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                <div className="w-1.5 h-1.5 bg-gray-200 rounded-full animate-bounce"></div>
               </div>
             </div>
           </div>
@@ -680,85 +667,78 @@ export default function ChatWidget({ isOpen, onToggle }: ChatWidgetProps) {
       </div>
 
       {/* Input */}
-      <div className="p-3 md:p-2.5 bg-white border-t border-gray-200">
+      <div className="p-3 bg-white border-t border-gray-100 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
         {/* Image Preview */}
         {imagePreview && (
-          <div className="mb-2 relative inline-block">
+          <div className="mb-3 relative inline-block group">
             <img 
               src={imagePreview} 
               alt="Preview" 
-              className="h-16 w-16 md:h-14 md:w-14 object-cover rounded-lg"
+              className="h-16 w-16 object-cover rounded-xl shadow-md border-2 border-white"
             />
             <button
               onClick={removeImage}
-              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 md:w-4 md:h-4 flex items-center justify-center hover:bg-red-600 shadow-sm"
+              className="absolute -top-2 -right-2 bg-gray-900 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-500 transition-colors shadow-lg border-2 border-white"
             >
-              <X className="w-4 h-4 md:w-3 md:h-3" />
+              <X className="w-3 h-3" />
             </button>
           </div>
         )}
         
-        <div className="flex items-center space-x-2 md:space-x-1.5">
-          {/* Voice Recording - LEFT */}
+        <div className="flex items-center gap-3 bg-gray-50/80 p-2.5 rounded-2xl border border-gray-200/50">
+          {/* Voice Recording */}
           <button
             onClick={isRecording ? stopRecording : startRecording}
             disabled={isLoading}
-            className={`flex items-center gap-1 p-2 md:p-1.5 rounded-lg transition disabled:opacity-50 ${
+            className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-300 ${
               isRecording
-                ? 'text-red-500 bg-red-50'
-                : 'text-gray-500 hover:text-accent hover:bg-gray-100'
+                ? 'bg-red-500 text-white shadow-lg shadow-red-200 scale-105'
+                : 'text-gray-400 hover:text-accent hover:bg-white'
             }`}
-            aria-label={isRecording ? 'Stop recording and send' : 'Start voice recording'}
           >
             {isRecording ? (
-              <>
-                <StopCircle className="w-5 h-5 md:w-4 md:h-4 animate-pulse" />
-                <span className="text-xs font-mono font-semibold text-red-500 min-w-[28px]">
-                  {formatDuration(recordingSeconds)}
-                </span>
-              </>
+              <StopCircle className="w-5 h-5 animate-pulse" />
             ) : (
-              <Mic className="w-5 h-5 md:w-4 md:h-4" />
+              <Mic className="w-5 h-5" />
             )}
           </button>
 
-          {/* Text Input - MIDDLE */}
+          {/* Text Input */}
           <input
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={isRecording ? "Recording..." : "Type message..."}
-            disabled={isLoading || isRecording}
-            className="flex-1 px-4 py-2 md:px-3 md:py-1.5 text-base md:text-sm border border-gray-300 rounded-full focus:outline-none focus:ring-1 focus:ring-accent focus:border-transparent disabled:bg-gray-100"
+            placeholder={isRecording ? `Recording... ${formatDuration(recordingSeconds)}` : "Type something..."}
+            disabled={isLoading}
+            className="flex-1 bg-transparent text-sm font-medium focus:outline-none placeholder:text-gray-400 py-2 px-1 disabled:opacity-50"
           />
 
-          {/* Image Upload - RIGHT */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImageSelect}
-            className="hidden"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading || isRecording}
-            className="p-2 md:p-1.5 text-gray-500 hover:text-accent transition disabled:opacity-50"
-            aria-label="Upload image"
-          >
-            <ImageIcon className="w-5 h-5 md:w-4 md:h-4" />
-          </button>
+          {/* Action Buttons */}
+          <div className="flex items-center gap-1.5 pr-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading || isRecording}
+              className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-accent hover:bg-white rounded-lg transition-colors"
+            >
+              <ImageIcon className="w-4.5 h-4.5" />
+            </button>
 
-          {/* Send Button - FAR RIGHT */}
-          <button
-            onClick={sendMessage}
-            disabled={isLoading || isRecording || (!inputValue.trim() && !selectedImage)}
-            className="w-10 h-10 md:w-8 md:h-8 bg-accent text-white rounded-full flex items-center justify-center hover:bg-opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-            aria-label="Send message"
-          >
-            <Send className="w-5 h-5 md:w-4 md:h-4" />
-          </button>
+            <button
+              onClick={sendMessage}
+              disabled={isLoading || (!isRecording && !inputValue.trim() && !selectedImage)}
+              className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-accent transition-colors disabled:opacity-30"
+            >
+              <Send className="w-4.5 h-4.5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

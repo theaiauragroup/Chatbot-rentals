@@ -103,10 +103,24 @@ export function LeadsTable({
           return v ? `${v.make} ${v.model}` : "~";
         },
         render: (r) => {
-          const v = vehiclesById.get(r.vehicleInterestIds[0]);
+          const rawId = String(r.vehicleInterestIds[0] || "").trim();
+          if (!rawId) return <span className="text-fg-muted text-xs">—</span>;
+
+          // Try exact match first
+          let v = vehiclesById.get(rawId);
+          
+          // If not found, try case-insensitive match
+          if (!v) {
+            const lowerId = rawId.toLowerCase();
+            v = store.vehicles.find(veh => 
+              veh.id.toLowerCase() === lowerId || 
+              `${veh.make} ${veh.model}`.toLowerCase() === lowerId
+            );
+          }
+
           return (
             <span className="text-fg-muted text-xs">
-              {v ? `${v.make} ${v.model}` : "—"}
+              {v ? `${v.make} ${v.model}` : rawId}
             </span>
           );
         },

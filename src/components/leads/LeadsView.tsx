@@ -78,6 +78,107 @@ function LeadsViewInner({
   const pathname = usePathname();
   const params = useSearchParams();
   const store = useLeadsStore();
+  const [isFetching, setIsFetching] = React.useState(false);
+  const [fetchError, setFetchError] = React.useState<string | null>(null);
+
+  // Fetch leads from webhook on mount
+  React.useEffect(() => {
+    async function fetchLeads(isSilent = false) {
+      if (!isSilent) setIsFetching(true);
+      setFetchError(null);
+      try {
+        const response = await fetch("/api/leads");
+        if (!response.ok) throw new Error(`Failed to fetch leads: ${response.status}`);
+        
+        const data = await response.json();
+        const rawLeads = Array.isArray(data) ? data : data.leads || [];
+        
+        // Map webhook data to Lead interface
+        const mappedLeads: Lead[] = rawLeads.map((item: any) => mapWebhookLead(item));
+        
+        if (mappedLeads.length > 0) {
+          store.setLeads(mappedLeads);
+        }
+      } catch (err: any) {
+        console.error("Leads fetch error:", err);
+        // Only show error toast if it's not a background fetch or if we have no data
+        if (!isSilent || store.leads.length === 0) {
+          setFetchError(err.message || "An error occurred while fetching leads.");
+        }
+      } finally {
+        setIsFetching(false);
+      }
+    }
+
+    // Initial load
+    fetchLeads();
+
+    // Auto-refresh every 30 seconds for a 'live' feel
+    const interval = setInterval(() => fetchLeads(true), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Helper to map external data to internal Lead interface
+  function mapWebhookLead(raw: any): Lead {
+    // Debug: Log the raw data to see what column names we're getting from Google Sheets
+    console.log("Mapping Lead from Google Sheets:", raw);
+
+    // Normalize all keys in the raw object (trim spaces)
+    const normalizedRaw: any = {};
+    Object.keys(raw).forEach(key => {
+      normalizedRaw[key.trim()] = raw[key];
+    });
+
+    // Helper to find a value in 'normalizedRaw' by checking multiple possible keys
+    const find = (...keys: string[]) => {
+      for (const k of keys) {
+        if (normalizedRaw[k] !== undefined && normalizedRaw[k] !== null) return normalizedRaw[k];
+        
+        const variants = [
+          k.toLowerCase(),
+          k.toUpperCase(),
+          k.trim(),
+          k.replace(/ /g, '_').toLowerCase(),
+          k.replace(/ /g, '').toLowerCase(),
+          k.charAt(0).toUpperCase() + k.slice(1),
+        ];
+
+        for (const v of variants) {
+          if (normalizedRaw[v] !== undefined && normalizedRaw[v] !== null) return normalizedRaw[v];
+        }
+      }
+      return undefined;
+    };
+
+    // Generate a stable fallback ID if "Lead ID" is missing to prevent flickering on refreshes
+    const nameFallback = find("Full Name", "customer_name", "name", "Full Name ") || "Unknown";
+    const phoneFallback = find("Phone Number", "phone", "customerPhone", "Phone Number ") || "";
+    const stableId = `lead_${nameFallback}_${phoneFallback}`.replace(/\s+/g, '_').toLowerCase();
+
+    return {
+      id: String(find("Lead ID", "id", "_id") || stableId),
+      chatId: String(find("Tenant ID", "chat_id") || ""),
+      customerName: nameFallback,
+      customerPhone: phoneFallback,
+      customerEmail: find("Email Address", "email", "customerEmail", "Email Address "),
+      temperature: String(find("Status (Hot/Warm/Cold)", "temperature", "status", "Status") || "cold").toLowerCase() as LeadTemperature,
+      outcome: String(find("Outcome (Open/Booked/Lost/No-response)", "outcome", "Outcome") || "open").toLowerCase() as LeadOutcome,
+      trip: {
+        pickupDate: find("Rental Start Date", "pickup_date", "pickup", "Rental Start Date ") || new Date().toISOString().split('T')[0],
+        returnDate: find("Rental End Date", "return_date", "return", "Rental End Date ") || new Date().toISOString().split('T')[0],
+        pickupLocation: find("Pickup Location", "pickup_location"),
+        dropoffLocation: find("Drop-off Location", "dropoff_location"),
+      },
+      vehicleInterestIds: find("Car of Interest", "vehicle_ids", "Car of Interest ") 
+        ? [String(find("Car of Interest", "vehicle_ids", "Car of Interest "))] 
+        : [],
+      estimatedValueUsd: Number(String(find("Estimated Value (USD)", "value", "Price", "Estimated Value (USD) ") || "0").replace(/[^0-9.]/g, '')),
+      managerNotes: find("Chat Summary", "notes", "Chat Summary ") || "",
+      createdAt: find("Created At", "created_at", "Date", "Created At ") || new Date().toISOString(),
+      updatedAt: find("Last Activity At", "updated_at", "Timestamp", "Last Activity At ") || new Date().toISOString(),
+      source: "web_widget",
+    };
+  }
 
   const view = (params.get("view") ?? "kanban") as "kanban" | "table";
   const status = (params.get("status") ?? "")
@@ -163,7 +264,14 @@ function LeadsViewInner({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 relative">
+      {/* Silent Refresh Indicator (Premium Progress Bar) */}
+      {isFetching && store.leads.length > 0 && (
+        <div className="fixed top-0 left-0 right-0 h-[3px] z-[100] pointer-events-none">
+          <div className="h-full bg-gradient-to-r from-transparent via-accent to-transparent w-full animate-progress-sliding shadow-[0_1px_10px_rgba(var(--accent-rgb),0.4)]"></div>
+        </div>
+      )}
+
       {/* Header strip */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -249,6 +357,33 @@ function LeadsViewInner({
       )}
 
       <LeadDrawer leadId={id} onClose={() => setParam({ id: null })} />
+
+      {/* Fetching overlay */}
+      {isFetching && store.leads.length === 0 && (
+        <div className="fixed inset-0 bg-white/40 backdrop-blur-sm flex items-center justify-center z-50 transition-all duration-500">
+          <div className="bg-white/80 backdrop-blur-md p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white/20 flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-300">
+            <div className="relative">
+              <div className="size-10 border-[3px] border-accent/10 rounded-full" />
+              <div className="absolute inset-0 size-10 border-[3px] border-accent border-t-transparent rounded-full animate-spin" />
+            </div>
+            <p className="text-sm font-semibold text-accent tracking-wide uppercase">Updating Leads</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error notification */}
+      {fetchError && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white text-red-500 px-5 py-3 rounded-2xl text-[13px] font-semibold border border-red-100 shadow-[0_10px_40px_rgba(239,68,68,0.12)] z-50 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="size-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
+          <span className="opacity-90">{fetchError}</span>
+          <button 
+            onClick={() => setFetchError(null)} 
+            className="ml-2 size-6 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors"
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
