@@ -47,10 +47,10 @@ export async function POST(req: NextRequest) {
     const historyWebhookUrl = process.env.N8N_HISTORY_WEBHOOK_URL;
     if (historyWebhookUrl) {
       const commonData = {
-        sessionId: body.sessionId,
-        startedAt: body.startedAt,
-        country: body.metadata?.language || '', // mapping language as a proxy for country/locale
-        metadata: body.metadata,
+        sessionId: body.userId || body.sessionId,
+        startedAt: body.startedAt || new Date().toISOString(),
+        country: body.metadata?.language || '', 
+        metadata: body.metadata || {},
         timestamp: new Date().toISOString(),
       };
 
