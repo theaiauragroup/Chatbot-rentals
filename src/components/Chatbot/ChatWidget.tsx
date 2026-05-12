@@ -358,7 +358,13 @@ export default function ChatWidget({
                 <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
                 <button onClick={() => fileInputRef.current?.click()} className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-accent hover:bg-white rounded-lg transition-all" title="Attach Image"><ImageIcon className="size-5" /></button>
                 <button 
-                  onClick={() => { if (inputValue.trim() || selectedImage) { sendMessage(inputValue.trim() || 'Sent an image', undefined, undefined, undefined, selectedImage || undefined); } }} 
+                  onClick={() => { 
+                    if (isRecording) { 
+                      stopRecording(); 
+                    } else if (inputValue.trim() || selectedImage) { 
+                      sendMessage(inputValue.trim() || 'Sent an image', undefined, undefined, undefined, selectedImage || undefined); 
+                    } 
+                  }} 
                   disabled={isLoading || (!isRecording && !inputValue.trim() && !selectedImage)} 
                   className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all ${(isLoading || (!isRecording && !inputValue.trim() && !selectedImage)) ? 'text-gray-200' : 'bg-accent text-white shadow-lg shadow-accent/20 hover:bg-accent-hover active:scale-95'}`}
                   title="Send Message"
