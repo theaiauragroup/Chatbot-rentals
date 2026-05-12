@@ -20,14 +20,31 @@ export function formatUsd(amount: number, opts: { cents?: boolean } = {}) {
   return opts.cents ? usdCents.format(amount) : usd.format(amount);
 }
 
+export function parseDate(d: string): Date {
+  if (!d || typeof d !== "string") return new Date();
+  
+  // Handle DD-MM-YYYY or DD/MM/YYYY
+  const sep = d.includes("-") ? "-" : d.includes("/") ? "/" : null;
+  if (sep) {
+    const parts = d.split(sep);
+    if (parts[0].length === 2 && parts[2].length === 4) {
+      return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+    }
+  }
+  
+  const iso = d.includes("T") ? d : d + "T00:00:00";
+  const date = new Date(iso);
+  return isNaN(date.getTime()) ? new Date() : date;
+}
+
 export function formatDate(d: ISODate, opts?: Intl.DateTimeFormatOptions) {
-  const date = new Date(d + "T00:00:00");
+  const date = parseDate(d);
   return date.toLocaleDateString("en-US", opts ?? { month: "short", day: "numeric" });
 }
 
 export function formatDateRange(s: ISODate, e: ISODate) {
-  const start = new Date(s + "T00:00:00");
-  const end = new Date(e + "T00:00:00");
+  const start = parseDate(s);
+  const end = parseDate(e);
   const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
   if (sameMonth) {
     return `${start.toLocaleString("en-US", { month: "short" })} ${start.getDate()}–${end.getDate()}`;
@@ -121,12 +138,12 @@ export const NOW_DEFAULT = "2026-05-08T14:30:00-07:00";
 export const NOW_DATE = new Date(NOW_DEFAULT);
 
 export function daysBetween(a: ISODate, b: ISODate) {
-  const ms = new Date(b + "T00:00:00").getTime() - new Date(a + "T00:00:00").getTime();
+  const ms = parseDate(b).getTime() - parseDate(a).getTime();
   return Math.round(ms / 86_400_000);
 }
 
 export function addDays(d: ISODate, n: number): ISODate {
-  const date = new Date(d + "T00:00:00");
+  const date = parseDate(d);
   date.setDate(date.getDate() + n);
   return date.toISOString().slice(0, 10);
 }

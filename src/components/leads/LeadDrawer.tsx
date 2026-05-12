@@ -9,6 +9,7 @@ import {
   MessageCircle,
   CalendarPlus,
 } from "lucide-react";
+import ReactMarkdown from 'react-markdown';
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -128,7 +129,13 @@ function LeadDrawerBody({
   }
 
   return (
-    <div className="px-5 py-4 flex flex-col gap-4">
+    <div className="px-5 py-4 flex flex-col gap-4 cw-md-styles">
+      <style jsx>{`
+        .cw-md-styles :global(p) { margin-bottom: 0.5rem; }
+        .cw-md-styles :global(p:last-child) { margin-bottom: 0; }
+        .cw-md-styles :global(strong) { font-weight: 600; }
+        .cw-md-styles :global(ul) { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+      `}</style>
       {/* Header — customer + temperature override */}
       <div className="flex items-start gap-3">
         <Avatar name={lead.customerName} size="lg" />
@@ -323,6 +330,18 @@ function LeadDrawerBody({
           </span>
         </Link>
       </Card>
+
+      {/* Chat Summary */}
+      {lead.managerNotes && (
+        <Card variant="flat">
+          <div className="px-4 pt-3 pb-2 text-sm font-semibold text-fg">
+            Chat Summary
+          </div>
+          <div className="px-4 pb-3.5 text-[13px] text-fg-muted leading-relaxed cw-md">
+            <ReactMarkdown>{lead.managerNotes}</ReactMarkdown>
+          </div>
+        </Card>
+      )}
 
       {/* Manager notes */}
       <div>
