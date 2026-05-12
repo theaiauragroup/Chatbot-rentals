@@ -78,7 +78,7 @@ function LeadsViewInner({
   const pathname = usePathname();
   const params = useSearchParams();
   const store = useLeadsStore();
-  const [isFetching, setIsFetching] = React.useState(false);
+  const [isFetching, setIsFetching] = React.useState(store.leads.length === 0);
   const [fetchError, setFetchError] = React.useState<string | null>(null);
 
   // Fetch leads from webhook on mount

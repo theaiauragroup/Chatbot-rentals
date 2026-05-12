@@ -9,7 +9,7 @@ export default function LeadsPage() {
   return (
     <React.Suspense fallback={<Skeleton className="h-[600px] w-full" />}>
       <LeadsView
-        initialLeads={leads}
+        initialLeads={[]}
         initialVehicles={vehicles}
         chats={chats}
         tenantSlug={tenant.slug}
