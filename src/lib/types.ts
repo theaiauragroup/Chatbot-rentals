@@ -168,6 +168,12 @@ export interface ChartPoint {
   revenueUsd: number;
 }
 
+export interface TopCarRow {
+  vehicle: Vehicle;
+  revenueUsd: number;
+  bookings: number;
+}
+
 export interface KpiSummary {
   rangeLabel: string;
   totalChats: number;
