@@ -13,8 +13,11 @@ import { formatDateRange, formatUsd, formatPhone } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toaster";
 import { toasts } from "@/lib/toasts";
 
-export function HotLeadsCard() {
-  const leads = todaysHotLeads;
+import type { Lead } from "@/lib/types";
+
+export function HotLeadsCard({ leads: externalLeads }: { leads?: Lead[] }) {
+  const sourceLeads = externalLeads || todaysHotLeads;
+  const leads = sourceLeads.filter(l => l.temperature === "hot" && l.outcome === "open");
   const toast = useToast();
 
   return (

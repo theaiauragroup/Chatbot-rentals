@@ -22,8 +22,15 @@ const FALLBACK_GRADIENTS: Record<Vehicle["category"], string> = {
   van: "linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%)",
 };
 
-export function RecentBookings({ max = 6 }: { max?: number }) {
-  const items = recentBookings.slice(0, max);
+export function RecentBookings({ max = 6, leads: externalLeads }: { max?: number; leads?: Lead[] }) {
+  const BOOKING_OUTCOMES = new Set(["booked", "deposit_paid", "deal_closed"]);
+  const sourceLeads = externalLeads || recentBookings;
+  
+  const filtered = sourceLeads.filter(l => BOOKING_OUTCOMES.has(l.outcome))
+    .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+    
+  const items = filtered.slice(0, max);
+  const totalValue = filtered.reduce((acc, l) => acc + l.estimatedValueUsd, 0);
 
   return (
     <Card className="flex flex-col flex-1 overflow-hidden">
@@ -31,9 +38,9 @@ export function RecentBookings({ max = 6 }: { max?: number }) {
         <div>
           <h3 className="text-sm font-semibold text-fg">Recent bookings</h3>
           <p className="text-[11px] text-fg-subtle mt-0.5">
-            {recentBookings.length} booked ·{" "}
+            {filtered.length} booked ·{" "}
             <span className="text-fg-muted">
-              {formatUsd(totalBookedValueUsd)} booked value
+              {formatUsd(totalValue)} booked value
             </span>
           </p>
         </div>
