@@ -40,7 +40,16 @@ export default function ChatWidget({
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [userId] = useState(() => `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const [userId] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedId = localStorage.getItem('chat_session_id');
+      if (savedId) return savedId;
+      const newId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem('chat_session_id', newId);
+      return newId;
+    }
+    return `user_${Date.now()}`;
+  });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -100,6 +109,7 @@ export default function ChatWidget({
       const payload: Record<string, unknown> = {
         message: content,
         userId,
+        sessionId: userId,
         history,
         timestamp: new Date().toISOString()
       };
@@ -129,13 +139,19 @@ export default function ChatWidget({
       console.log('Webhook response data:', data);
       const reply = data.reply || data.message || data.output || data.text || (typeof data === 'string' ? data : null) || 'I apologize, but I encountered an error. Please try again.';
 
-      const imageUrlRegex = /(https?:\/\/[^\s]+(?:\.(?:png|jpg|jpeg|gif|webp|svg)|images\.unsplash\.com)[^\s]*)/i;
-      const detectedImageUrl = reply.match(imageUrlRegex)?.[0];
+      // Improved Regex: Handles standard extensions and CDN URLs with query params (like Unsplash/Cloudinary)
+      const imageUrlRegex = /https?:\/\/\S+\.(?:png|jpg|jpeg|gif|webp|svg|bmp)(\?[\S]*)?|https?:\/\/images\.unsplash\.com\/[\S]+|https?:\/\/\S+\/image\/[\S]+/gi;
+      
+      const detectedImages = reply.match(imageUrlRegex);
+      const detectedImageUrl = detectedImages ? detectedImages[0] : null;
       const imageUrl = data.imageUrl || data.image || detectedImageUrl;
 
       let finalContent = reply;
-      if (detectedImageUrl && finalContent.includes(detectedImageUrl)) {
-        finalContent = finalContent.replace(detectedImageUrl, '').trim();
+      if (imageUrl) {
+        // Remove ALL occurrences of the image URL from the text to keep it clean
+        finalContent = finalContent.replace(imageUrlRegex, '').trim();
+        // Also remove markdown image syntax if it exists
+        finalContent = finalContent.replace(/!\[.*\]\(.*\)/g, '').trim();
       }
 
       setMessages(prev => [...prev, {
@@ -186,19 +202,34 @@ export default function ChatWidget({
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      
+      // Determine best supported MIME type (Safari needs audio/mp4, others prefer audio/webm)
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
+        ? 'audio/webm' 
+        : MediaRecorder.isTypeSupported('audio/mp4') 
+          ? 'audio/mp4' 
+          : '';
+
+      const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
       mediaRecorder.ondataavailable = (event) => { if (event.data.size > 0) audioChunksRef.current.push(event.data); };
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
         reader.onloadend = () => {
-          const base64Audio = reader.result as string;
+          // Rule: Audio can be raw base64 OR full Data URL. Image MUST have Data URL prefix.
+          const base64Audio = reader.result as string; 
           const finalDuration = recordingDurationRef.current;
-          console.log('Final recording duration:', finalDuration);
+          
+          console.log('Voice message ready:', { 
+            type: audioBlob.type, 
+            size: audioBlob.size, 
+            duration: finalDuration 
+          });
+
           sendMessage(`[Voice Message - ${finalDuration}s]`, base64Audio, 'voice', finalDuration);
         };
         stream.getTracks().forEach(track => track.stop());
@@ -444,12 +475,10 @@ export default function ChatWidget({
                               />
                             ) : message.type === 'image' && message.imageUrl ? (
                               <div className="space-y-2 -mx-1 -my-0.5">
-                                <div className="rounded-xl overflow-hidden">
-                                  <img
-                                    src={message.imageUrl}
-                                    alt="Shared"
-                                    className="max-w-full h-auto block cursor-pointer transition-transform duration-300 hover:scale-[1.02]"
-                                    onClick={() => window.open(message.imageUrl, '_blank')}
+                                <div className="rounded-xl overflow-hidden bg-black/[0.03]">
+                                  <ChatImage 
+                                    src={message.imageUrl} 
+                                    alt="Shared image" 
                                   />
                                 </div>
                                 {message.content && message.content !== 'Sent an image' && (
@@ -760,6 +789,38 @@ function VoicePlayer({
       >
         {Math.floor(duration)}s
       </span>
+    </div>
+  );
+}
+
+function ChatImage({ src, alt }: { src: string; alt: string }) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  return (
+    <div className="relative min-h-[160px] w-full flex items-center justify-center overflow-hidden">
+      {!isLoaded && !hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/[0.03]">
+          <div className="w-5 h-5 border-2 border-black/10 border-t-black/40 rounded-full animate-spin" />
+        </div>
+      )}
+      
+      {hasError ? (
+        <div className="p-6 text-center">
+          <p className="text-[11px] text-black/40 font-medium">Image unavailable</p>
+        </div>
+      ) : (
+        <img
+          src={src}
+          alt={alt}
+          onLoad={() => setIsLoaded(true)}
+          onError={() => setHasError(true)}
+          className={`max-w-full h-auto block cursor-pointer transition-all duration-700 ease-out ${
+            isLoaded ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-[1.05] blur-2xl'
+          } hover:scale-[1.03] active:scale-[0.98]`}
+          onClick={() => window.open(src, '_blank')}
+        />
+      )}
     </div>
   );
 }
