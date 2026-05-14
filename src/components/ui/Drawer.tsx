@@ -61,14 +61,15 @@ export function Drawer({
                 {title}
               </Dialog.Title>
               <Dialog.Close
+                onClick={() => onOpenChange(false)}
                 className={cn(
-                  "size-7 inline-flex items-center justify-center rounded-md",
+                  "size-9 -mr-1 inline-flex items-center justify-center rounded-lg",
                   "text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors duration-100",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 )}
                 aria-label="Close"
               >
-                <X className="size-4" aria-hidden />
+                <X className="size-5" aria-hidden />
               </Dialog.Close>
             </div>
           )}
