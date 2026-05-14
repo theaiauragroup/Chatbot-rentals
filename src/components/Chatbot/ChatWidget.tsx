@@ -162,7 +162,7 @@ export default function ChatWidget({
 
       // Extract image metadata using the same robust logic
       const mdImageRegex = /!\[(.*?)\]\((.*?)\)/g;
-      const extractedUrls = Array.from(sanitizedReply.matchAll(mdImageRegex)).map(m => m[2]);
+      const extractedUrls = Array.from(sanitizedReply.matchAll(mdImageRegex)).map((m: any) => m[2]);
 
       setMessages(prev => [...prev, {
         id: `msg_${Date.now()}_bot`,
