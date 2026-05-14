@@ -153,7 +153,7 @@ export default function ChatWidget({
       const reply = data.reply || data.message || data.output || data.text || (typeof data === 'string' ? data : null) || 'I apologize, but I encountered an error. Please try again.';
 
       // Super-Sanitizer: Aggressively repairs broken AI markdown tags
-      const sanitizedReply = reply.replace(/!\[([^\]]*)\][\s\n]*\(([\s\S]*?)(?:\)|$)/g, (match, alt, url) => {
+      const sanitizedReply = reply.replace(/!\[([^\]]*)\][\s\n]*\(([\s\S]*?)(?:\)|$)/g, (match: string, alt: string, url: string) => {
         // Remove all newlines and spaces from the URL part to make it a valid markdown link
         const cleanUrl = url.replace(/[\s\n\r\t]/g, '').trim();
         if (!cleanUrl) return match; // If we couldn't find a URL, don't break it further
