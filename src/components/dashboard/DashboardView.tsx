@@ -53,16 +53,16 @@ export function DashboardView() {
       customerName: nameFallback,
       customerPhone: phoneFallback,
       customerEmail: find("Email Address", "email"),
-      temperature: String(find("Status", "temperature", "status") || "cold").toLowerCase() as LeadTemperature,
-      outcome: String(find("Outcome", "outcome") || "open").toLowerCase() as LeadOutcome,
+      temperature: String(find("Status (Hot/Warm/Cold)", "Status", "temperature") || "cold").toLowerCase() as LeadTemperature,
+      outcome: String(find("Outcome (Open/Booked/Lost/No-response)", "Outcome", "outcome") || "open").toLowerCase() as LeadOutcome,
       trip: {
         pickupDate: find("Rental Start Date", "pickup_date") || new Date().toISOString(),
         returnDate: find("Rental End Date", "return_date") || new Date().toISOString(),
         pickupLocation: find("Pickup Location"),
         dropoffLocation: find("Drop-off Location"),
       },
-      vehicleInterestIds: find("Car of Interest", "Vehicle", "Car", "Vehicle Interest", "Requested Car") 
-        ? [String(find("Car of Interest", "Vehicle", "Car", "Vehicle Interest", "Requested Car"))] 
+      vehicleInterestIds: find("Vehicle interest", "Car of Interest", "Vehicle", "Car") 
+        ? [String(find("Vehicle interest", "Car of Interest", "Vehicle", "Car"))] 
         : [],
       estimatedValueUsd: Number(String(find("Estimated Value (USD)", "Estimated Value", "value") || "0").replace(/[^0-9.]/g, '')),
       managerNotes: find("Chat Summary", "notes") || "",

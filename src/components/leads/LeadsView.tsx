@@ -151,8 +151,8 @@ function LeadsViewInner({
     };
 
     // Generate a stable fallback ID if "Lead ID" is missing to prevent flickering on refreshes
-    const nameFallback = find("Full Name", "customer_name", "name", "Full Name ") || "Unknown";
-    const phoneFallback = find("Phone Number", "phone", "customerPhone", "Phone Number ") || "";
+    const nameFallback = find("Full Name", "customer_name", "name") || "Unknown";
+    const phoneFallback = find("Phone Number", "phone") || "";
     const stableId = `lead_${nameFallback}_${phoneFallback}`.replace(/\s+/g, '_').toLowerCase();
 
     return {
@@ -160,22 +160,22 @@ function LeadsViewInner({
       chatId: String(find("Tenant ID", "chat_id") || ""),
       customerName: nameFallback,
       customerPhone: phoneFallback,
-      customerEmail: find("Email Address", "email", "customerEmail", "Email Address "),
-      temperature: String(find("Status (Hot/Warm/Cold)", "temperature", "status", "Status") || "cold").toLowerCase() as LeadTemperature,
-      outcome: String(find("Outcome (Open/Booked/Lost/No-response)", "outcome", "Outcome") || "open").toLowerCase() as LeadOutcome,
+      customerEmail: find("Email Address", "email"),
+      temperature: String(find("Status (Hot/Warm/Cold)", "Status", "temperature") || "cold").toLowerCase() as LeadTemperature,
+      outcome: String(find("Outcome (Open/Booked/Lost/No-response)", "Outcome", "outcome") || "open").toLowerCase() as LeadOutcome,
       trip: {
-        pickupDate: find("Rental Start Date", "pickup_date", "pickup", "Rental Start Date ") || new Date().toISOString().split('T')[0],
-        returnDate: find("Rental End Date", "return_date", "return", "Rental End Date ") || new Date().toISOString().split('T')[0],
-        pickupLocation: find("Pickup Location", "pickup_location"),
-        dropoffLocation: find("Drop-off Location", "dropoff_location"),
+        pickupDate: find("Rental Start Date", "pickup_date") || new Date().toISOString().split('T')[0],
+        returnDate: find("Rental End Date", "return_date") || new Date().toISOString().split('T')[0],
+        pickupLocation: find("Pickup Location"),
+        dropoffLocation: find("Drop-off Location"),
       },
-      vehicleInterestIds: find("Car of Interest", "vehicle_ids", "Car of Interest ") 
-        ? [String(find("Car of Interest", "vehicle_ids", "Car of Interest "))] 
+      vehicleInterestIds: find("Vehicle interest", "Car of Interest", "Vehicle", "Car") 
+        ? [String(find("Vehicle interest", "Car of Interest", "Vehicle", "Car"))] 
         : [],
-      estimatedValueUsd: Number(String(find("Estimated Value (USD)", "value", "Price", "Estimated Value (USD) ") || "0").replace(/[^0-9.]/g, '')),
-      managerNotes: find("Chat Summary", "notes", "Chat Summary ") || "",
-      createdAt: find("Created At", "created_at", "Date", "Created At ") || new Date().toISOString(),
-      updatedAt: find("Last Activity At", "updated_at", "Timestamp", "Last Activity At ") || new Date().toISOString(),
+      estimatedValueUsd: Number(String(find("Estimated Value (USD)", "Estimated Value", "value") || "0").replace(/[^0-9.]/g, '')),
+      managerNotes: find("Chat Summary", "notes") || "",
+      createdAt: find("Created At", "Date") || new Date().toISOString(),
+      updatedAt: find("Last Activity At", "Timestamp") || new Date().toISOString(),
       source: "web_widget",
     };
   }

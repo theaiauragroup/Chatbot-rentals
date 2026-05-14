@@ -106,7 +106,7 @@ export function KanbanBoard({
             vehicleLabel={
               activeVehicle
                 ? `${activeVehicle.make} ${activeVehicle.model}`
-                : undefined
+                : active.vehicleInterestIds[0]
             }
             chatMessageCount={activeChat?.messages.length}
             onOpen={() => {}}
@@ -178,7 +178,9 @@ function KanbanColumn({
                 key={lead.id}
                 lead={lead}
                 vehicleLabel={
-                  vehicle ? `${vehicle.make} ${vehicle.model}` : undefined
+                  vehicle 
+                    ? `${vehicle.make} ${vehicle.model}` 
+                    : lead.vehicleInterestIds[0]
                 }
                 chatMessageCount={chat?.messages.length}
                 onOpen={onOpen}
