@@ -12,6 +12,7 @@ interface Message {
   audioUrl?: string;
   duration?: number;
   imageUrl?: string;
+  imageUrls?: string[];
   timestamp: Date;
   id: string;
 }
@@ -42,13 +43,23 @@ export default function ChatWidget({
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [userId] = useState(() => {
     if (typeof window !== 'undefined') {
+      // 24-Hour Expiration Logic: Check BEFORE initializing ID or loading messages
+      const lastInteraction = localStorage.getItem('chat_last_interaction');
+      const oneDayInMs = 24 * 60 * 60 * 1000;
+      
+      if (lastInteraction && (Date.now() - parseInt(lastInteraction)) > oneDayInMs) {
+        localStorage.removeItem('chatMessages');
+        localStorage.removeItem('chat_session_id');
+        localStorage.removeItem('chat_last_interaction');
+      }
+
       const savedId = localStorage.getItem('chat_session_id');
       if (savedId) return savedId;
-      const newId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const newId = `session-${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
       localStorage.setItem('chat_session_id', newId);
       return newId;
     }
-    return `user_${Date.now()}`;
+    return `session-${Date.now()}`;
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -83,6 +94,8 @@ export default function ChatWidget({
     if (messages.length > 1) {
       const toSave = messages.map(m => ({ ...m, audioUrl: undefined }));
       localStorage.setItem('chatMessages', JSON.stringify(toSave));
+      // Update last interaction time
+      localStorage.setItem('chat_last_interaction', Date.now().toString());
     }
   }, [messages]);
 
@@ -104,13 +117,10 @@ export default function ChatWidget({
     setIsLoading(true);
 
     try {
-      const history = messages.map(m => ({ role: m.role, content: m.content }));
-
       const payload: Record<string, unknown> = {
         message: content,
         userId,
         sessionId: userId,
-        history,
         timestamp: new Date().toISOString()
       };
 
@@ -118,13 +128,16 @@ export default function ChatWidget({
         payload.audio = audio;
         payload.audioType = audioType;
         payload.duration = duration;
+        console.log('Voice Message Payload:', { duration, size: audio.length });
       }
 
       if (image) {
         payload.image = image;
+        payload.imageType = 'image';
+        console.log('Image Message Payload:', { type: 'image', size: image.length });
       }
 
-      console.log('Sending message to webhook:', { content, audio: audio ? 'BASE64_DATA' : null, duration });
+      console.log('Sending Webhook Payload:', { ...payload, audio: audio ? '[BASE64]' : null, image: image ? '[BASE64]' : null });
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -139,27 +152,16 @@ export default function ChatWidget({
       console.log('Webhook response data:', data);
       const reply = data.reply || data.message || data.output || data.text || (typeof data === 'string' ? data : null) || 'I apologize, but I encountered an error. Please try again.';
 
-      // Improved Regex: Handles standard extensions and CDN URLs with query params (like Unsplash/Cloudinary)
-      const imageUrlRegex = /https?:\/\/\S+\.(?:png|jpg|jpeg|gif|webp|svg|bmp)(\?[\S]*)?|https?:\/\/images\.unsplash\.com\/[\S]+|https?:\/\/\S+\/image\/[\S]+/gi;
-      
-      const detectedImages = reply.match(imageUrlRegex);
-      const detectedImageUrl = detectedImages ? detectedImages[0] : null;
-      const imageUrl = data.imageUrl || data.image || detectedImageUrl;
-
-      let finalContent = reply;
-      if (imageUrl) {
-        // Remove ALL occurrences of the image URL from the text to keep it clean
-        finalContent = finalContent.replace(imageUrlRegex, '').trim();
-        // Also remove markdown image syntax if it exists
-        finalContent = finalContent.replace(/!\[.*\]\(.*\)/g, '').trim();
-      }
+      // Extract image metadata for the message type
+      const mdImageRegex = /!\[(.*?)\]\((https?:\/\/.*?)\)/gi;
+      const extractedUrls = Array.from(reply.matchAll(mdImageRegex)).map(m => m[2]);
 
       setMessages(prev => [...prev, {
         id: `msg_${Date.now()}_bot`,
         role: 'assistant',
-        content: finalContent,
-        type: imageUrl ? 'image' : 'text',
-        imageUrl: imageUrl,
+        content: reply, // Pass raw reply to let ReactMarkdown handle it
+        type: extractedUrls.length > 0 ? 'image' : 'text',
+        imageUrls: extractedUrls,
         timestamp: new Date()
       }]);
     } catch {
@@ -178,19 +180,30 @@ export default function ChatWidget({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (inputValue.trim() || selectedImage) {
-        sendMessage(inputValue.trim() || 'Sent an image', undefined, undefined, undefined, selectedImage || undefined);
+        sendMessage(inputValue.trim() || '[Image Message]', undefined, undefined, undefined, selectedImage || undefined);
       }
     }
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    console.log('File selected:', file?.name, file?.type, file?.size);
+    
     if (file && file.size <= 5 * 1024 * 1024) {
       const reader = new FileReader();
+      reader.onloadstart = () => console.log('Starting to read image...');
       reader.readAsDataURL(file);
-      reader.onloadend = () => setSelectedImage(reader.result as string);
+      reader.onloadend = () => {
+        console.log('Image read successfully');
+        setSelectedImage(reader.result as string);
+        // Reset input value so same file can be selected again
+        e.target.value = '';
+      };
+      reader.onerror = (err) => console.error('FileReader error:', err);
     } else if (file) {
+      console.warn('File too large:', file.size);
       alert('Image must be less than 5MB');
+      e.target.value = '';
     }
   };
 
@@ -473,23 +486,24 @@ export default function ChatWidget({
                                 duration={message.duration || 0}
                                 role={message.role}
                               />
-                            ) : message.type === 'image' && message.imageUrl ? (
-                              <div className="space-y-2 -mx-1 -my-0.5">
-                                <div className="rounded-xl overflow-hidden bg-black/[0.03]">
-                                  <ChatImage 
-                                    src={message.imageUrl} 
-                                    alt="Shared image" 
-                                  />
-                                </div>
-                                {message.content && message.content !== 'Sent an image' && (
-                                  <div className={`text-[13.5px] leading-[1.5] px-1 ${isUser ? 'text-white' : 'text-black'}`}>
-                                    {message.role === 'assistant' ? (
-                                      <div className="cw-md">
-                                        <ReactMarkdown>{message.content}</ReactMarkdown>
+                            ) : message.type === 'image' ? (
+                              <div className="space-y-3 -mx-1 -my-0.5">
+                                <div className="flex flex-col gap-2">
+                                  {message.imageUrls && message.imageUrls.length > 0 ? (
+                                    message.imageUrls.map((url, i) => (
+                                      <div key={i} className="rounded-xl overflow-hidden bg-black/[0.03]">
+                                        <ChatImage src={url} alt={`Image ${i + 1}`} />
                                       </div>
-                                    ) : (
-                                      message.content
-                                    )}
+                                    ))
+                                  ) : (message.imageUrl || message.audioUrl) ? (
+                                    <div className="rounded-xl overflow-hidden bg-black/[0.03]">
+                                      <ChatImage src={message.imageUrl || message.audioUrl || ''} alt="Uploaded image" />
+                                    </div>
+                                  ) : null}
+                                </div>
+                                {message.content && message.content !== '[Image Message]' && (
+                                  <div className={`text-[13.5px] leading-[1.5] px-1 ${isUser ? 'text-white' : 'text-black'}`}>
+                                    {message.content}
                                   </div>
                                 )}
                               </div>
@@ -497,7 +511,18 @@ export default function ChatWidget({
                               <div className={`text-[13.5px] leading-[1.5] ${isUser ? 'text-white' : 'text-black'}`}>
                                 {message.role === 'assistant' ? (
                                   <div className="cw-md">
-                                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                                    <ReactMarkdown
+                                      components={{
+                                        p: ({ children }) => <div className="mb-2 last:mb-0">{children}</div>,
+                                        img: ({ src, alt }) => (
+                                          <div className="my-2.5 -mx-1 rounded-xl overflow-hidden bg-black/[0.03]">
+                                            <ChatImage src={src || ''} alt={alt || ''} />
+                                          </div>
+                                        )
+                                      }}
+                                    >
+                                      {message.content}
+                                    </ReactMarkdown>
                                   </div>
                                 ) : (
                                   message.content
@@ -595,12 +620,15 @@ export default function ChatWidget({
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/*"
+                      accept="image/png, image/jpeg, image/jpg, image/gif, image/webp"
                       onChange={handleImageSelect}
                       className="hidden"
                     />
                     <button
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => {
+                        console.log('Attach button clicked');
+                        fileInputRef.current?.click();
+                      }}
                       className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-black/45 hover:text-black hover:bg-white active:scale-95 transition-all"
                       aria-label="Attach image"
                     >
@@ -676,7 +704,7 @@ export default function ChatWidget({
                         transition={{ type: 'spring', damping: 18, stiffness: 300 }}
                         onClick={() => {
                           if (inputValue.trim() || selectedImage) {
-                            sendMessage(inputValue.trim() || 'Sent an image', undefined, undefined, undefined, selectedImage || undefined);
+                            sendMessage(inputValue.trim() || '[Image Message]', undefined, undefined, undefined, selectedImage || undefined);
                           }
                         }}
                         disabled={isLoading}
