@@ -525,7 +525,7 @@ export default function ChatWidget({
                                         p: ({ children }) => <div className="mb-2 last:mb-0">{children}</div>,
                                         img: ({ src, alt }) => (
                                           <div className="my-2.5 -mx-1 rounded-xl overflow-hidden bg-black/[0.03]">
-                                            <ChatImage src={src || ''} alt={alt || ''} />
+                                            <ChatImage src={(src as string) || ''} alt={(alt as string) || ''} />
                                           </div>
                                         )
                                       }}
