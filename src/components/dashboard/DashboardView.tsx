@@ -61,7 +61,9 @@ export function DashboardView() {
         pickupLocation: find("Pickup Location"),
         dropoffLocation: find("Drop-off Location"),
       },
-      vehicleInterestIds: find("Car of Interest") ? [String(find("Car of Interest"))] : [],
+      vehicleInterestIds: find("Car of Interest", "Vehicle", "Car", "Vehicle Interest", "Requested Car") 
+        ? [String(find("Car of Interest", "Vehicle", "Car", "Vehicle Interest", "Requested Car"))] 
+        : [],
       estimatedValueUsd: Number(String(find("Estimated Value (USD)", "Estimated Value", "value") || "0").replace(/[^0-9.]/g, '')),
       managerNotes: find("Chat Summary", "notes") || "",
       createdAt: find("Created At", "Date") || new Date().toISOString(),

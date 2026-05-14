@@ -95,7 +95,12 @@ function LeadDrawerBody({
   onRequestAddToCalendar: (vehicleId: string) => void;
 }) {
   const interestVehicles = lead.vehicleInterestIds
-    .map((vid) => store.vehicles.find((v) => v.id === vid))
+    .map((vid) => 
+      store.vehicles.find((v) => 
+        v.id === vid || 
+        `${v.make} ${v.model}`.toLowerCase().includes(vid.toLowerCase())
+      )
+    )
     .filter((v): v is Vehicle => !!v);
 
   const days = daysBetween(lead.trip.pickupDate, lead.trip.returnDate);
