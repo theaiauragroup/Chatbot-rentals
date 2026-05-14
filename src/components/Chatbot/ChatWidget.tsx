@@ -152,15 +152,24 @@ export default function ChatWidget({
       console.log('Webhook response data:', data);
       const reply = data.reply || data.message || data.output || data.text || (typeof data === 'string' ? data : null) || 'I apologize, but I encountered an error. Please try again.';
 
-      // Extract image metadata for the message type
-      const mdImageRegex = /!\[(.*?)\]\((https?:\/\/.*?)\)/gi;
-      const extractedUrls = Array.from(reply.matchAll(mdImageRegex)).map(m => m[2]);
+      // Super-Sanitizer: Aggressively repairs broken AI markdown tags
+      const sanitizedReply = reply.replace(/!\[([^\]]*)\][\s\n]*\(([\s\S]*?)(?:\)|$)/g, (match, alt, url) => {
+        // Remove all newlines and spaces from the URL part to make it a valid markdown link
+        const cleanUrl = url.replace(/[\s\n\r\t]/g, '').trim();
+        if (!cleanUrl) return match; // If we couldn't find a URL, don't break it further
+        return `![${alt}](${cleanUrl})`;
+      });
+
+      // Extract image metadata using the same robust logic
+      const mdImageRegex = /!\[(.*?)\]\((.*?)\)/g;
+      const extractedUrls = Array.from(sanitizedReply.matchAll(mdImageRegex)).map(m => m[2]);
 
       setMessages(prev => [...prev, {
         id: `msg_${Date.now()}_bot`,
         role: 'assistant',
-        content: reply, // Pass raw reply to let ReactMarkdown handle it
-        type: extractedUrls.length > 0 ? 'image' : 'text',
+        content: sanitizedReply,
+        // Rule: Assistant messages always use 'text' type to allow ReactMarkdown to handle interleaved images.
+        type: 'text',
         imageUrls: extractedUrls,
         timestamp: new Date()
       }]);
@@ -486,7 +495,7 @@ export default function ChatWidget({
                                 duration={message.duration || 0}
                                 role={message.role}
                               />
-                            ) : message.type === 'image' ? (
+                            ) : (message.type === 'image' && isUser) ? (
                               <div className="space-y-3 -mx-1 -my-0.5">
                                 <div className="flex flex-col gap-2">
                                   {message.imageUrls && message.imageUrls.length > 0 ? (
