@@ -38,10 +38,20 @@ export function DashboardView() {
     const normalizedRaw: any = {};
     Object.keys(raw).forEach(key => normalizedRaw[key.trim()] = raw[key]);
     const find = (...keys: string[]) => {
+      const allKeys = Object.keys(normalizedRaw);
       for (const k of keys) {
         if (normalizedRaw[k] !== undefined && normalizedRaw[k] !== null) return normalizedRaw[k];
-        const variants = [k.toLowerCase(), k.toUpperCase(), k.trim(), k.replace(/ /g, '_').toLowerCase(), k.replace(/ /g, '').toLowerCase(), k.charAt(0).toUpperCase() + k.slice(1)];
-        for (const v of variants) if (normalizedRaw[v] !== undefined && normalizedRaw[v] !== null) return normalizedRaw[v];
+        const lowerK = k.toLowerCase().trim();
+        for (const rawKey of allKeys) {
+          const lowerRawKey = rawKey.toLowerCase().trim();
+          if (lowerRawKey === lowerK) return normalizedRaw[rawKey];
+          if (lowerRawKey.replace(/[^a-z0-9]/g, '') === lowerK.replace(/[^a-z0-9]/g, '')) return normalizedRaw[rawKey];
+        }
+        if (lowerK.length > 3) {
+          for (const rawKey of allKeys) {
+            if (rawKey.toLowerCase().includes(lowerK)) return normalizedRaw[rawKey];
+          }
+        }
       }
       return undefined;
     };

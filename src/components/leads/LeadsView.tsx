@@ -131,20 +131,24 @@ function LeadsViewInner({
 
     // Helper to find a value in 'normalizedRaw' by checking multiple possible keys
     const find = (...keys: string[]) => {
+      const allKeys = Object.keys(normalizedRaw);
       for (const k of keys) {
+        // 1. Try exact normalized match
         if (normalizedRaw[k] !== undefined && normalizedRaw[k] !== null) return normalizedRaw[k];
         
-        const variants = [
-          k.toLowerCase(),
-          k.toUpperCase(),
-          k.trim(),
-          k.replace(/ /g, '_').toLowerCase(),
-          k.replace(/ /g, '').toLowerCase(),
-          k.charAt(0).toUpperCase() + k.slice(1),
-        ];
+        // 2. Try case-insensitive variants
+        const lowerK = k.toLowerCase().trim();
+        for (const rawKey of allKeys) {
+          const lowerRawKey = rawKey.toLowerCase().trim();
+          if (lowerRawKey === lowerK) return normalizedRaw[rawKey];
+          if (lowerRawKey.replace(/[^a-z0-9]/g, '') === lowerK.replace(/[^a-z0-9]/g, '')) return normalizedRaw[rawKey];
+        }
 
-        for (const v of variants) {
-          if (normalizedRaw[v] !== undefined && normalizedRaw[v] !== null) return normalizedRaw[v];
+        // 3. Try fuzzy substring match as last resort
+        if (lowerK.length > 3) {
+          for (const rawKey of allKeys) {
+            if (rawKey.toLowerCase().includes(lowerK)) return normalizedRaw[rawKey];
+          }
         }
       }
       return undefined;
