@@ -6,11 +6,15 @@ import { vehicles } from "./vehicles";
 const BOOKING_OUTCOMES = new Set(["booked", "deposit_paid", "deal_closed"]);
 
 export const recentBookings: Lead[] = leads
-  .filter((l) => BOOKING_OUTCOMES.has(l.outcome))
-  .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+  .filter((l) => l.outcome && BOOKING_OUTCOMES.has(l.outcome))
+  .sort((a, b) => {
+    const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+    const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+    return timeB - timeA;
+  });
 
 export const totalBookedValueUsd: number = recentBookings.reduce(
-  (acc, l) => acc + l.estimatedValueUsd,
+  (acc, l) => acc + (l.estimatedValueUsd || 0),
   0
 );
 

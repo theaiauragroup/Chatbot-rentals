@@ -229,8 +229,8 @@ function LeadsViewInner({
   const filtered = React.useMemo(() => {
     const ql = q.trim().toLowerCase();
     return store.leads.filter((l) => {
-      if (status.length > 0 && !status.includes(l.temperature)) return false;
-      if (outcome.length > 0 && !outcome.includes(l.outcome)) return false;
+      if (status.length > 0 && (!l.temperature || !status.includes(l.temperature))) return false;
+      if (outcome.length > 0 && (!l.outcome || !outcome.includes(l.outcome))) return false;
       if (category.length > 0) {
         const cats = new Set(
           l.vehicleInterestIds
@@ -260,7 +260,9 @@ function LeadsViewInner({
 
   const counts = React.useMemo(() => {
     const c = { hot: 0, warm: 0, cold: 0 };
-    for (const l of filtered) c[l.temperature] += 1;
+    for (const l of filtered) {
+      if (l.temperature) c[l.temperature] += 1;
+    }
     return c;
   }, [filtered]);
 

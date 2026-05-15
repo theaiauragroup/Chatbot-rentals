@@ -62,12 +62,12 @@ function synthesize(chatId: string, leadId: string): ChatSeed {
   const v0 = lead.vehicleInterestIds[0];
   return {
     id: chatId,
-    startedAt: lead.createdAt,
+    startedAt: lead.createdAt || new Date().toISOString(),
     customerName: lead.customerName,
     customerPhone: lead.customerPhone,
     customerEmail: lead.customerEmail,
     vehicleIds: lead.vehicleInterestIds,
-    finalTemperature: lead.temperature,
+    finalTemperature: lead.temperature || "cold",
     countryCode: "US",
     build: (id, s) => [
       userMsg(id, "hey looking for a car", plus(s, 0)),

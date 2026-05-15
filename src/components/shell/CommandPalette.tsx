@@ -65,13 +65,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       .map((l) => ({
         id: l.id,
         group: "Leads",
-        label: l.customerName,
+        label: l.customerName || "Anonymous",
         meta: [l.customerPhone && formatPhone(l.customerPhone), formatRelative(l.updatedAt)]
           .filter(Boolean)
           .join(" · "),
         href: `/leads?id=${l.id}`,
-        icon: <Avatar name={l.customerName} size="sm" />,
-        rightSlot: <TemperaturePill temperature={l.temperature} />,
+        icon: <Avatar name={l.customerName || "Anonymous"} size="sm" />,
+        rightSlot: <TemperaturePill temperature={l.temperature || "cold"} />,
       }));
 
     const chatItems: PaletteItem[] = chats

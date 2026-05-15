@@ -56,7 +56,7 @@ export const leadById = (id: string) => leads.find((l) => l.id === id);
 export function todaysHotLeads(now: Date) {
   const ymd = now.toISOString().slice(0, 10);
   return leads.filter(
-    (l) => l.temperature === "hot" && l.outcome === "open" && l.createdAt.slice(0, 10) === ymd
+    (l) => l.temperature === "hot" && l.outcome === "open" && (l.createdAt || "").slice(0, 10) === ymd
   );
 }
 

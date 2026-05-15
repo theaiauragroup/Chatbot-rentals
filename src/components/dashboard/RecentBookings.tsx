@@ -26,11 +26,15 @@ export function RecentBookings({ max = 6, leads: externalLeads }: { max?: number
   const BOOKING_OUTCOMES = new Set(["booked", "deposit_paid", "deal_closed"]);
   const sourceLeads = externalLeads || recentBookings;
   
-  const filtered = sourceLeads.filter(l => BOOKING_OUTCOMES.has(l.outcome))
-    .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+  const filtered = sourceLeads.filter(l => l.outcome && BOOKING_OUTCOMES.has(l.outcome))
+    .sort((a, b) => {
+      const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      return timeB - timeA;
+    });
     
   const items = filtered.slice(0, max);
-  const totalValue = filtered.reduce((acc, l) => acc + l.estimatedValueUsd, 0);
+  const totalValue = filtered.reduce((acc, l) => acc + (l.estimatedValueUsd || 0), 0);
 
   return (
     <Card className="flex flex-col flex-1 overflow-hidden">
@@ -86,11 +90,11 @@ function BookingRow({ lead }: { lead: Lead }) {
         href={`/leads?id=${lead.id}`}
         className="flex items-center gap-3 px-5 h-14 hover:bg-surface-2 transition-colors duration-100"
       >
-        <Avatar name={lead.customerName} size="sm" />
+        <Avatar name={lead.customerName || "Unknown"} size="sm" />
         <PhotoThumb vehicle={vehicle} />
         <div className="flex-1 min-w-0 leading-tight">
           <p className="text-sm font-medium text-fg truncate">
-            {lead.customerName}
+            {lead.customerName || "Unknown"}
           </p>
           <p className="text-[11px] text-fg-subtle truncate">
             {vehicle ? `${vehicle.make} ${vehicle.model}` : "Vehicle TBD"}
@@ -102,7 +106,7 @@ function BookingRow({ lead }: { lead: Lead }) {
           </span>
         </div>
         <span className="text-sm font-semibold text-fg tabular-nums shrink-0 w-16 text-right">
-          {formatUsd(lead.estimatedValueUsd)}
+          {formatUsd(lead.estimatedValueUsd || 0)}
         </span>
       </Link>
     </li>

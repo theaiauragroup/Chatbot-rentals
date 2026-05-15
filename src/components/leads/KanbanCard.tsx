@@ -82,7 +82,7 @@ export function KanbanCard({
 
       <div className="text-[11px] text-fg-muted leading-tight truncate">
         {vehicleLabel ?? "Browsing"} 
-        {(lead.trip.pickupDate || lead.trip.returnDate) && (
+        {(lead.trip.pickupDate && lead.trip.returnDate) && (
           <>
             {" · "}
             {formatDateRange(lead.trip.pickupDate, lead.trip.returnDate)}
@@ -92,7 +92,7 @@ export function KanbanCard({
 
       <div className="flex items-center justify-between gap-2 text-[11px]">
         <span className="text-fg font-semibold tabular-nums">
-          {formatUsd(lead.estimatedValueUsd)}
+          {formatUsd(lead.estimatedValueUsd || 0)}
         </span>
         <span className="text-fg-subtle inline-flex items-center gap-1">
           {chatMessageCount !== undefined && (

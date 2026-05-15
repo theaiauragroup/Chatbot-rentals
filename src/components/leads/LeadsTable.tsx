@@ -17,7 +17,7 @@ import { TemperaturePill } from "./StatusPill";
 import { OutcomeSelect } from "./OutcomeSelect";
 import { useLeadsStore } from "./LeadsStore";
 import type { Chat, Lead, LeadOutcome, Vehicle } from "@/lib/types";
-import { formatDate, formatRelative, formatUsd } from "@/lib/utils";
+import { formatDate, formatDateRange, formatRelative, formatUsd } from "@/lib/utils";
 
 const PAGE_SIZE = 25;
 
@@ -55,7 +55,7 @@ export function LeadsTable({
         key: "customer",
         label: "Customer",
         sortable: true,
-        sortAccessor: (r) => r.customerName,
+        sortAccessor: (r) => r.customerName || "",
         render: (r) => (
           <div className="flex items-center gap-2.5">
             <Avatar name={r.customerName || "A"} size="sm" />
@@ -74,21 +74,21 @@ export function LeadsTable({
         key: "temperature",
         label: "Temp",
         sortable: true,
-        sortAccessor: (r) => r.temperature,
+        sortAccessor: (r) => r.temperature || "cold",
         width: 110,
-        render: (r) => <TemperaturePill temperature={r.temperature} />,
+        render: (r) => <TemperaturePill temperature={r.temperature || "cold"} />,
       },
       {
         key: "outcome",
         label: "Outcome",
         sortable: true,
-        sortAccessor: (r) => r.outcome,
+        sortAccessor: (r) => r.outcome || "open",
         width: 160,
         render: (r) => (
           <div onClick={(e) => e.stopPropagation()} role="presentation">
             <OutcomeSelect
               size="sm"
-              value={r.outcome}
+              value={r.outcome || "open"}
               onChange={(o: LeadOutcome) => store.setOutcome(r.id, o)}
             />
           </div>
@@ -129,7 +129,7 @@ export function LeadsTable({
         key: "trip",
         label: "Trip",
         sortable: true,
-        sortAccessor: (r) => r.trip.pickupDate,
+        sortAccessor: (r) => r.trip.pickupDate || "",
         width: 170,
         render: (r) => {
           if (!r.trip.pickupDate && !r.trip.returnDate) return <span className="text-fg-muted text-xs">—</span>;
@@ -138,7 +138,7 @@ export function LeadsTable({
           return (
             <div className="text-[11px] text-fg-muted leading-tight truncate">
               {vehicleLabel ?? "Browsing"} 
-              {(r.trip.pickupDate || r.trip.returnDate) && (
+              {(r.trip.pickupDate && r.trip.returnDate) && (
                 <>
                   {" · "}
                   {formatDateRange(r.trip.pickupDate, r.trip.returnDate)}
@@ -152,18 +152,18 @@ export function LeadsTable({
         key: "value",
         label: "Value",
         sortable: true,
-        sortAccessor: (r) => r.estimatedValueUsd,
+        sortAccessor: (r) => r.estimatedValueUsd || 0,
         align: "right",
         width: 110,
         render: (r) => (
-          <span className="tabular-nums">{formatUsd(r.estimatedValueUsd)}</span>
+          <span className="tabular-nums">{formatUsd(r.estimatedValueUsd || 0)}</span>
         ),
       },
       {
         key: "updated",
         label: "Last activity",
         sortable: true,
-        sortAccessor: (r) => r.updatedAt,
+        sortAccessor: (r) => r.updatedAt || "",
         align: "right",
         width: 130,
         render: (r) => (

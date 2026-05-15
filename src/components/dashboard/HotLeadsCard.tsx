@@ -45,15 +45,15 @@ export function HotLeadsCard({ leads: externalLeads }: { leads?: Lead[] }) {
                 key={lead.id}
                 className="flex items-center gap-2.5 px-4 py-2 hover:bg-surface-2 transition-colors duration-100"
               >
-                <Avatar name={lead.customerName} size="sm" />
+                <Avatar name={lead.customerName ?? "Unknown"} size="sm" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-fg truncate">
-                    {lead.customerName}
+                    {lead.customerName ?? "Unknown"}
                   </p>
                   <p className="text-[11px] text-fg-subtle truncate">
                     {vehicle ? `${vehicle.make} ${vehicle.model}` : "Vehicle"} ·{" "}
-                    {formatDateRange(lead.trip.pickupDate, lead.trip.returnDate)} ·{" "}
-                    {formatUsd(lead.estimatedValueUsd)}
+                    {(lead.trip.pickupDate && lead.trip.returnDate) ? formatDateRange(lead.trip.pickupDate, lead.trip.returnDate) : "—"} ·{" "}
+                    {formatUsd(lead.estimatedValueUsd || 0)}
                   </p>
                 </div>
                 <Button

@@ -214,7 +214,7 @@ function LeadDrawerBody({
         <div className="flex flex-col gap-1.5">
           <span className="text-fg-subtle">Outcome</span>
           <OutcomeSelect
-            value={lead.outcome}
+            value={lead.outcome || "open"}
             onChange={handleOutcomeChange}
             size="sm"
           />
@@ -420,8 +420,8 @@ function BookingConfirmModal({
   function commit() {
     store.addBookingRange(vehicle!.id, {
       id: `blk_${Date.now()}`,
-      start: lead!.trip.pickupDate,
-      end: lead!.trip.returnDate,
+      start: lead!.trip.pickupDate || "",
+      end: lead!.trip.returnDate || "",
       reason: "rented",
       leadId: lead!.id,
     });
