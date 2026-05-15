@@ -58,9 +58,9 @@ export function LeadsTable({
         sortAccessor: (r) => r.customerName,
         render: (r) => (
           <div className="flex items-center gap-2.5">
-            <Avatar name={r.customerName} size="sm" />
+            <Avatar name={r.customerName || "A"} size="sm" />
             <div className="flex flex-col leading-tight min-w-0">
-              <span className="text-fg truncate">{r.customerName}</span>
+              <span className="text-fg truncate">{r.customerName || "Anonymous"}</span>
               {r.customerPhone && (
                 <span className="text-[11px] text-fg-subtle tabular-nums truncate">
                   {r.customerPhone}
@@ -131,11 +131,22 @@ export function LeadsTable({
         sortable: true,
         sortAccessor: (r) => r.trip.pickupDate,
         width: 170,
-        render: (r) => (
-          <span className="text-xs text-fg-muted tabular-nums">
-            {formatDate(r.trip.pickupDate)} → {formatDate(r.trip.returnDate)}
-          </span>
-        ),
+        render: (r) => {
+          if (!r.trip.pickupDate && !r.trip.returnDate) return <span className="text-fg-muted text-xs">—</span>;
+          const v = vehiclesById.get(r.vehicleInterestIds[0]);
+          const vehicleLabel = v ? `${v.make} ${v.model}` : null;
+          return (
+            <div className="text-[11px] text-fg-muted leading-tight truncate">
+              {vehicleLabel ?? "Browsing"} 
+              {(r.trip.pickupDate || r.trip.returnDate) && (
+                <>
+                  {" · "}
+                  {formatDateRange(r.trip.pickupDate, r.trip.returnDate)}
+                </>
+              )}
+            </div>
+          );
+        },
       },
       {
         key: "value",

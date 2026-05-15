@@ -67,10 +67,10 @@ export function KanbanCard({
       )}
     >
       <div className="flex items-center gap-2 min-w-0">
-        <Avatar name={lead.customerName} size="sm" />
+        <Avatar name={lead.customerName || "A"} size="sm" />
         <div className="flex-1 min-w-0 leading-tight">
           <p className="text-xs font-medium text-fg truncate">
-            {lead.customerName}
+            {lead.customerName || "Anonymous"}
           </p>
           {lead.customerPhone && (
             <p className="text-[10px] text-fg-subtle tabular-nums truncate">
@@ -81,8 +81,13 @@ export function KanbanCard({
       </div>
 
       <div className="text-[11px] text-fg-muted leading-tight truncate">
-        {vehicleLabel ?? "Browsing"} ·{" "}
-        {formatDateRange(lead.trip.pickupDate, lead.trip.returnDate)}
+        {vehicleLabel ?? "Browsing"} 
+        {(lead.trip.pickupDate || lead.trip.returnDate) && (
+          <>
+            {" · "}
+            {formatDateRange(lead.trip.pickupDate, lead.trip.returnDate)}
+          </>
+        )}
       </div>
 
       <div className="flex items-center justify-between gap-2 text-[11px]">

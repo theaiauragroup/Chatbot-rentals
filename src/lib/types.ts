@@ -28,22 +28,22 @@ export type LeadOutcome =
 export interface Lead {
   id: ID;
   chatId: ID;
-  customerName: string;
+  customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
-  temperature: LeadTemperature;
-  outcome: LeadOutcome;
+  temperature?: LeadTemperature;
+  outcome?: LeadOutcome;
   trip: {
-    pickupDate: ISODate;
-    returnDate: ISODate;
+    pickupDate?: ISODate;
+    returnDate?: ISODate;
     pickupLocation?: string;
     dropoffLocation?: string;
   };
   vehicleInterestIds: ID[];
-  estimatedValueUsd: number;
+  estimatedValueUsd?: number;
   managerNotes?: string;
-  createdAt: ISODateTime;
-  updatedAt: ISODateTime;
+  createdAt?: ISODateTime;
+  updatedAt?: ISODateTime;
   source: "web_widget";
 }
 

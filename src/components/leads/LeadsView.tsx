@@ -133,53 +133,60 @@ function LeadsViewInner({
     const find = (...keys: string[]) => {
       const allKeys = Object.keys(normalizedRaw);
       for (const k of keys) {
-        // 1. Try exact normalized match
-        if (normalizedRaw[k] !== undefined && normalizedRaw[k] !== null) return normalizedRaw[k];
+        const val = normalizedRaw[k];
+        // 1. Try exact normalized match (case-sensitive)
+        if (val !== undefined && val !== null && String(val).trim() !== "") return val;
         
         // 2. Try case-insensitive variants
         const lowerK = k.toLowerCase().trim();
         for (const rawKey of allKeys) {
           const lowerRawKey = rawKey.toLowerCase().trim();
-          if (lowerRawKey === lowerK) return normalizedRaw[rawKey];
-          if (lowerRawKey.replace(/[^a-z0-9]/g, '') === lowerK.replace(/[^a-z0-9]/g, '')) return normalizedRaw[rawKey];
-        }
-
-        // 3. Try fuzzy substring match as last resort
-        if (lowerK.length > 3) {
-          for (const rawKey of allKeys) {
-            if (rawKey.toLowerCase().includes(lowerK)) return normalizedRaw[rawKey];
+          const rawVal = normalizedRaw[rawKey];
+          if (lowerRawKey === lowerK && rawVal !== undefined && rawVal !== null && String(rawVal).trim() !== "") {
+            return rawVal;
+          }
+          if (lowerRawKey.replace(/[^a-z0-9]/g, '') === lowerK.replace(/[^a-z0-9]/g, '') && rawVal !== undefined && rawVal !== null && String(rawVal).trim() !== "") {
+            return rawVal;
           }
         }
       }
       return undefined;
     };
 
-    // Generate a stable fallback ID if "Lead ID" is missing to prevent flickering on refreshes
-    const nameFallback = find("Full Name", "customer_name", "name") || "Unknown";
-    const phoneFallback = find("Phone Number", "phone") || "";
-    const stableId = `lead_${nameFallback}_${phoneFallback}`.replace(/\s+/g, '_').toLowerCase();
+    const leadIdRaw = find("Lead ID", "id", "_id", "ID");
+    const nameRaw = find("Full Name", "customer_name", "name", "Customer Name", "Name");
+    const phoneRaw = find("Phone Number", "phone", "Customer Phone", "Phone");
+    
+    // Generate a stable fallback ID only if "Lead ID" is completely missing
+    const stableId = leadIdRaw ? String(leadIdRaw) : `lead_${(nameRaw || 'anon').replace(/\s+/g, '_').toLowerCase()}_${String(phoneRaw || Date.now()).replace(/\D/g, '')}`;
 
     return {
-      id: String(find("Lead ID", "id", "_id") || stableId),
-      chatId: String(find("Tenant ID", "chat_id") || ""),
-      customerName: nameFallback,
-      customerPhone: phoneFallback,
-      customerEmail: find("Email Address", "email"),
-      temperature: String(find("Status (Hot/Warm/Cold)", "Status", "temperature") || "cold").toLowerCase() as LeadTemperature,
-      outcome: String(find("Outcome (Open/Booked/Lost/No-response)", "Outcome", "outcome") || "open").toLowerCase() as LeadOutcome,
+      id: stableId,
+      chatId: String(find("Tenant ID", "chat_id", "Session ID", "session_id") || ""),
+      customerName: nameRaw ? String(nameRaw) : undefined,
+      customerPhone: phoneRaw ? String(phoneRaw) : undefined,
+      customerEmail: find("Email Address", "email", "Customer Email"),
+      temperature: find("Status (Hot/Warm/Cold)", "Status", "temperature", "Lead Temperature") 
+        ? (String(find("Status (Hot/Warm/Cold)", "Status", "temperature", "Lead Temperature")).toLowerCase() as LeadTemperature)
+        : undefined,
+      outcome: find("Outcome (Open/Booked/Lost/No-response)", "Outcome", "outcome", "Lead Outcome")
+        ? (String(find("Outcome (Open/Booked/Lost/No-response)", "Outcome", "outcome", "Lead Outcome")).toLowerCase() as LeadOutcome)
+        : undefined,
       trip: {
-        pickupDate: find("Rental Start Date", "pickup_date") || new Date().toISOString().split('T')[0],
-        returnDate: find("Rental End Date", "return_date") || new Date().toISOString().split('T')[0],
+        pickupDate: find("Rental Start Date", "pickup_date", "Start Date", "Pickup Date"),
+        returnDate: find("Rental End Date", "return_date", "End Date", "Return Date"),
         pickupLocation: find("Pickup Location"),
         dropoffLocation: find("Drop-off Location"),
       },
-      vehicleInterestIds: find("Vehicle interest", "Car of Interest", "Vehicle", "Car") 
-        ? [String(find("Vehicle interest", "Car of Interest", "Vehicle", "Car"))] 
+      vehicleInterestIds: find("Vehicle interest", "Car of Interest", "Vehicle", "Car", "Vehicle Name") 
+        ? [String(find("Vehicle interest", "Car of Interest", "Vehicle", "Car", "Vehicle Name"))] 
         : [],
-      estimatedValueUsd: Number(String(find("Estimated Value (USD)", "Estimated Value", "value") || "0").replace(/[^0-9.]/g, '')),
-      managerNotes: find("Chat Summary", "notes") || "",
-      createdAt: find("Created At", "Date") || new Date().toISOString(),
-      updatedAt: find("Last Activity At", "Timestamp") || new Date().toISOString(),
+      estimatedValueUsd: find("Estimated Value (USD)", "Estimated Value", "value", "Value")
+        ? Number(String(find("Estimated Value (USD)", "Estimated Value", "value", "Value")).replace(/[^0-9.]/g, ''))
+        : undefined,
+      managerNotes: find("Chat Summary", "notes", "Summary", "Conversation Summary") || "",
+      createdAt: find("Created At", "Date", "Created"),
+      updatedAt: find("Last Activity At", "Timestamp", "Updated At", "Last Updated"),
       source: "web_widget",
     };
   }

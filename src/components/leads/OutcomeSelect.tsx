@@ -63,8 +63,8 @@ export function OutcomeSelect({
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           )}
         >
-          <span aria-hidden className={cn("size-1.5 rounded-full", DOT[value])} />
-          {outcomeLabel(value)}
+          <span aria-hidden className={cn("size-1.5 rounded-full", value ? DOT[value] : "bg-fg-muted")} />
+          {value ? outcomeLabel(value) : "Unset"}
           <ChevronDown className="size-3.5 text-fg-subtle" aria-hidden />
         </button>
       </DropdownMenu.Trigger>

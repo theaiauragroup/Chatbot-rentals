@@ -7,9 +7,10 @@ export function TemperaturePill({
   temperature,
   className,
 }: {
-  temperature: LeadTemperature;
+  temperature?: LeadTemperature;
   className?: string;
 }) {
+  if (!temperature) return <Badge variant="neutral" withDot className={className}>Unset</Badge>;
   return (
     <Badge variant={temperature} withDot aria-label={`${tempLabel(temperature)} lead`} className={className}>
       {tempLabel(temperature)}

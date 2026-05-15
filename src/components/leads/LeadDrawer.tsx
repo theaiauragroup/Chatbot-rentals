@@ -143,10 +143,10 @@ function LeadDrawerBody({
       `}</style>
       {/* Header — customer + temperature override */}
       <div className="flex items-start gap-3">
-        <Avatar name={lead.customerName} size="lg" />
+        <Avatar name={lead.customerName || "U"} size="lg" />
         <div className="flex-1 min-w-0">
           <p className="text-md font-semibold text-fg truncate leading-tight">
-            {lead.customerName}
+            {lead.customerName || "Unknown Lead"}
           </p>
           <p className="text-xs text-fg-subtle mt-0.5">
             {lead.customerPhone && (
@@ -222,66 +222,80 @@ function LeadDrawerBody({
       </div>
 
       <div className="flex items-center justify-between text-xs text-fg-muted">
-        <span>
-          Estimated value{" "}
-          <span className="text-fg font-semibold tabular-nums">
-            {formatUsd(lead.estimatedValueUsd)}
+        {lead.estimatedValueUsd !== undefined && (
+          <span>
+            Estimated value{" "}
+            <span className="text-fg font-semibold tabular-nums">
+              {formatUsd(lead.estimatedValueUsd)}
+            </span>
           </span>
-        </span>
-        <span>
-          Updated{" "}
-          <span className="text-fg tabular-nums">
-            {formatRelative(lead.updatedAt)}
+        )}
+        {lead.updatedAt && (
+          <span>
+            Updated{" "}
+            <span className="text-fg tabular-nums">
+              {formatRelative(lead.updatedAt)}
+            </span>
           </span>
-        </span>
+        )}
       </div>
 
       {/* Trip card */}
-      <Card variant="flat">
-        <div className="px-4 pt-3 pb-2 text-sm font-semibold text-fg">Trip</div>
-        <dl className="px-4 pb-3 grid grid-cols-[80px_1fr] gap-y-1.5 text-xs">
-          <dt className="text-fg-subtle">Pickup</dt>
-          <dd className="text-fg">
-            {formatDate(lead.trip.pickupDate, {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            })}
-            {lead.trip.pickupLocation && (
-              <span className="text-fg-muted"> · {lead.trip.pickupLocation}</span>
+      {(lead.trip.pickupDate || lead.trip.returnDate) && (
+        <Card variant="flat">
+          <div className="px-4 pt-3 pb-2 text-sm font-semibold text-fg">Trip</div>
+          <dl className="px-4 pb-3 grid grid-cols-[80px_1fr] gap-y-1.5 text-xs">
+            {lead.trip.pickupDate && (
+              <>
+                <dt className="text-fg-subtle">Pickup</dt>
+                <dd className="text-fg">
+                  {formatDate(lead.trip.pickupDate, {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                  {lead.trip.pickupLocation && (
+                    <span className="text-fg-muted"> · {lead.trip.pickupLocation}</span>
+                  )}
+                </dd>
+              </>
             )}
-          </dd>
-          <dt className="text-fg-subtle">Return</dt>
-          <dd className="text-fg">
-            {formatDate(lead.trip.returnDate, {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            })}
-            {lead.trip.dropoffLocation && (
-              <span className="text-fg-muted"> · {lead.trip.dropoffLocation}</span>
+            {lead.trip.returnDate && (
+              <>
+                <dt className="text-fg-subtle">Return</dt>
+                <dd className="text-fg">
+                  {formatDate(lead.trip.returnDate, {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                  {lead.trip.dropoffLocation && (
+                    <span className="text-fg-muted"> · {lead.trip.dropoffLocation}</span>
+                  )}
+                </dd>
+              </>
             )}
-          </dd>
-          <dt className="text-fg-subtle">Duration</dt>
-          <dd className="text-fg tabular-nums">
-            {days} {days === 1 ? "day" : "days"} ·{" "}
-            <span className="text-fg-muted">
-              {formatDateRange(lead.trip.pickupDate, lead.trip.returnDate)}
-            </span>
-          </dd>
-        </dl>
-      </Card>
+            {(lead.trip.pickupDate && lead.trip.returnDate) && (
+              <>
+                <dt className="text-fg-subtle">Duration</dt>
+                <dd className="text-fg tabular-nums">
+                  {days} {days === 1 ? "day" : "days"} ·{" "}
+                  <span className="text-fg-muted">
+                    {formatDateRange(lead.trip.pickupDate, lead.trip.returnDate)}
+                  </span>
+                </dd>
+              </>
+            )}
+          </dl>
+        </Card>
+      )}
 
       {/* Vehicle interest card */}
-      <Card variant="flat">
-        <div className="px-4 pt-3 pb-2 text-sm font-semibold text-fg">
-          Vehicle interest
-        </div>
-        {interestVehicles.length === 0 ? (
-          <p className="px-4 pb-3 text-xs text-fg-subtle italic">
-            No specific vehicle was discussed.
-          </p>
-        ) : (
+      {interestVehicles.length > 0 && (
+        <Card variant="flat">
+          <div className="px-4 pt-3 pb-2 text-sm font-semibold text-fg">
+            Vehicle interest
+          </div>
           <ul className="border-t border-border divide-y divide-border">
             {interestVehicles.map((v) => (
               <li key={v.id}>
@@ -308,8 +322,8 @@ function LeadDrawerBody({
               </li>
             ))}
           </ul>
-        )}
-      </Card>
+        </Card>
+      )}
 
       {/* Conversation card */}
       <Card variant="flat">

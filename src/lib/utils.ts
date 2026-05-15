@@ -16,7 +16,8 @@ const usdCents = new Intl.NumberFormat("en-US", {
   currency: "USD",
 });
 
-export function formatUsd(amount: number, opts: { cents?: boolean } = {}) {
+export function formatUsd(amount: number | undefined | null, opts: { cents?: boolean } = {}) {
+  if (amount === undefined || amount === null) return "";
   return opts.cents ? usdCents.format(amount) : usd.format(amount);
 }
 
@@ -37,7 +38,8 @@ export function parseDate(d: string): Date {
   return isNaN(date.getTime()) ? new Date() : date;
 }
 
-export function formatDate(d: ISODate, opts?: Intl.DateTimeFormatOptions) {
+export function formatDate(d: ISODate | undefined | null, opts?: Intl.DateTimeFormatOptions) {
+  if (!d) return "";
   const date = parseDate(d);
   return date.toLocaleDateString("en-US", opts ?? { month: "short", day: "numeric" });
 }
@@ -61,7 +63,8 @@ export function formatDateTime(dt: ISODateTime) {
   return `${formatDate(dt.slice(0, 10) as ISODate)} ${formatTime(dt)}`;
 }
 
-export function formatRelative(dt: ISODateTime, now: Date = new Date(NOW_DEFAULT)) {
+export function formatRelative(dt: ISODateTime | undefined | null, now: Date = new Date()) {
+  if (!dt) return "";
   const then = new Date(dt);
   const diffMs = now.getTime() - then.getTime();
   const diffSec = Math.round(diffMs / 1000);
@@ -134,10 +137,11 @@ export function outcomeLabel(o: LeadOutcome) {
  * a deterministic clock instead of the real wall clock. Set to today
  * (project date 2026-05-08, 14:30 PT).
  */
-export const NOW_DEFAULT = "2026-05-08T14:30:00-07:00";
-export const NOW_DATE = new Date(NOW_DEFAULT);
+export const NOW_DEFAULT = new Date().toISOString();
+export const NOW_DATE = new Date();
 
-export function daysBetween(a: ISODate, b: ISODate) {
+export function daysBetween(a: ISODate | undefined | null, b: ISODate | undefined | null) {
+  if (!a || !b) return 0;
   const ms = parseDate(b).getTime() - parseDate(a).getTime();
   return Math.round(ms / 86_400_000);
 }
