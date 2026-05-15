@@ -21,8 +21,9 @@ export function formatUsd(amount: number | undefined | null, opts: { cents?: boo
   return opts.cents ? usdCents.format(amount) : usd.format(amount);
 }
 
-export function parseDate(d: string): Date {
-  if (!d || typeof d !== "string") return new Date();
+export function parseDate(d: string | undefined | null): Date {
+  if (!d) return NOW_DATE;
+  const s = String(d);
   
   // Handle DD-MM-YYYY or DD/MM/YYYY
   const sep = d.includes("-") ? "-" : d.includes("/") ? "/" : null;
@@ -35,7 +36,7 @@ export function parseDate(d: string): Date {
   
   const iso = d.includes("T") ? d : d + "T00:00:00";
   const date = new Date(iso);
-  return isNaN(date.getTime()) ? new Date() : date;
+  return isNaN(date.getTime()) ? NOW_DATE : date;
 }
 
 export function formatDate(d: ISODate | undefined | null, opts?: Intl.DateTimeFormatOptions) {
@@ -137,8 +138,8 @@ export function outcomeLabel(o: LeadOutcome) {
  * a deterministic clock instead of the real wall clock. Set to today
  * (project date 2026-05-08, 14:30 PT).
  */
-export const NOW_DEFAULT = new Date().toISOString();
-export const NOW_DATE = new Date();
+export const NOW_DEFAULT = "2026-05-15T10:00:00Z";
+export const NOW_DATE = new Date(NOW_DEFAULT);
 
 export function daysBetween(a: ISODate | undefined | null, b: ISODate | undefined | null) {
   if (!a || !b) return 0;

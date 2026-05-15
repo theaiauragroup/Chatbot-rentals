@@ -52,7 +52,10 @@ export function KanbanBoard({
 
   const grouped = React.useMemo(() => {
     const g: Record<LeadTemperature, Lead[]> = { hot: [], warm: [], cold: [] };
-    for (const l of leads) g[l.temperature].push(l);
+    for (const l of leads) {
+      const t = l.temperature || "cold";
+      g[t].push(l);
+    }
     return g;
   }, [leads]);
 
@@ -133,7 +136,7 @@ function KanbanColumn({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: temperature });
 
-  const totalValue = leads.reduce((acc, l) => acc + l.estimatedValueUsd, 0);
+  const totalValue = leads.reduce((acc, l) => acc + (l.estimatedValueUsd || 0), 0);
   const avg = leads.length === 0 ? 0 : Math.round(totalValue / leads.length);
 
   return (

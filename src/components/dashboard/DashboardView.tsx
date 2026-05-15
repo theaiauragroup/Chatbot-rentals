@@ -98,12 +98,14 @@ export function DashboardView() {
 
   const totalNewLeads = k.newLeads.hot + k.newLeads.warm + k.newLeads.cold;
 
-  function greetingSub() {
-    const h = NOW_DATE.getHours();
-    if (h < 12) return "Here’s what’s happening this morning";
-    if (h < 17) return "Here’s what’s happening this week";
-    return "Quick recap before you log off";
-  }
+  const [greeting, setGreeting] = React.useState("Here’s what’s happening");
+
+  React.useEffect(() => {
+    const h = new Date().getHours();
+    if (h < 12) setGreeting("Here’s what’s happening this morning");
+    else if (h < 17) setGreeting("Here’s what’s happening this week");
+    else setGreeting("Quick recap before you log off");
+  }, []);
 
   const funnelStages = [
     { label: "Chats", count: k.totalChats },
@@ -120,7 +122,7 @@ export function DashboardView() {
       const vid = l.vehicleInterestIds[0];
       if (!vid) return;
       const cur = revByVehicle.get(vid) ?? { revenue: 0, bookings: 0 };
-      cur.revenue += l.estimatedValueUsd;
+      cur.revenue += l.estimatedValueUsd || 0;
       cur.bookings += 1;
       revByVehicle.set(vid, cur);
     });
@@ -143,7 +145,7 @@ export function DashboardView() {
             <h2 className="text-lg font-semibold text-fg leading-tight" style={{ letterSpacing: "var(--tracking-tight)" }}>
               Hi {manager.name.split(" ")[0]},
             </h2>
-            <p className="text-xs text-fg-muted mt-0.5">{greetingSub()}</p>
+            <p className="text-xs text-fg-muted mt-0.5">{greeting}</p>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="inline-flex items-center gap-1.5 h-6 pl-1.5 pr-2 rounded-full bg-success-soft text-success text-[11px] font-medium">
