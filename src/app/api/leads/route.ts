@@ -13,19 +13,14 @@ export async function GET() {
     });
 
     if (!response.ok) {
-      return NextResponse.json(
-        { error: `Webhook responded with status: ${response.status}` },
-        { status: response.status }
-      );
+      console.warn(`Leads webhook returned ${response.status}. Returning empty list.`);
+      return NextResponse.json([]);
     }
 
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error: any) {
     console.error('Leads proxy error:', error);
-    return NextResponse.json(
-      { error: 'Failed to connect to the leads webhook' },
-      { status: 500 }
-    );
+    return NextResponse.json([]);
   }
 }

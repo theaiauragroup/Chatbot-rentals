@@ -18,11 +18,15 @@ import { FilterMultiSelect } from "@/components/data/FilterMultiSelect";
 import { Pagination } from "@/components/data/Pagination";
 import { CsvExportButton } from "@/components/data/CsvExportButton";
 import { TemperaturePill } from "@/components/leads/StatusPill";
-import type { Chat, LeadOutcome, LeadTemperature } from "@/lib/types";
+import { OutcomeSelect } from "@/components/leads/OutcomeSelect";
+import type { Chat, LeadOutcome, LeadTemperature, Lead, Vehicle } from "@/lib/types";
 import {
   formatDate,
   formatTime,
   formatDuration,
+  formatRelative,
+  formatDateRange,
+  formatUsd,
   cn,
 } from "@/lib/utils";
 
@@ -66,27 +70,23 @@ interface ChatsTableProps {
   tenantSlug: string;
   /** Map of leadId → outcome, computed server-side and passed in. */
   leadOutcomeByLeadId: Record<string, LeadOutcome>;
+  leadsById: Record<string, Lead>;
+  vehiclesById: Record<string, Vehicle>;
+  onOpenLead: (leadId: string) => void;
 }
 
 export function ChatsTable({
   chats,
   tenantSlug,
   leadOutcomeByLeadId,
+  leadsById,
+  vehiclesById,
+  onOpenLead,
 }: ChatsTableProps) {
   const router = useRouter();
-  const pathname = usePathname();
   const params = useSearchParams();
 
-  // ─── Read state from URL ──────────────────────────────────────────────────
-  const q = params.get("q") ?? "";
-  const status = (params.get("status") ?? "")
-    .split(",")
-    .filter(Boolean) as LeadTemperature[];
-  const outcome = (params.get("outcome") ?? "")
-    .split(",")
-    .filter(Boolean) as LeadOutcome[];
-  const country = (params.get("country") ?? "").split(",").filter(Boolean);
-  const sort = params.get("sort") ?? "startedAt";
+  const sort = params.get("sort") ?? "updated";
   const dir = (params.get("dir") as SortDir | null) ?? "desc";
   const page = Math.max(1, parseInt(params.get("page") ?? "1", 10) || 1);
 
@@ -96,61 +96,25 @@ export function ChatsTable({
       if (v === null || v === "") next.delete(k);
       else next.set(k, v);
     }
-    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+    const pathname = window.location.pathname;
+    window.history.replaceState(null, "", `${pathname}?${next.toString()}`);
   }
-
-  function setListParam(key: string, values: string[]) {
-    setParam({ [key]: values.length === 0 ? null : values.join(","), page: null });
-  }
-
-  // ─── Filter ───────────────────────────────────────────────────────────────
-  const filtered = React.useMemo(() => {
-    const ql = q.trim().toLowerCase();
-    return chats.filter((c) => {
-      if (status.length > 0 && !status.includes(c.finalTemperature)) return false;
-      if (country.length > 0 && (!c.countryCode || !country.includes(c.countryCode)))
-        return false;
-      if (outcome.length > 0) {
-        // Outcome on the chat is via its linked lead's outcome.
-        const o = c.leadId ? leadOutcomeByLeadId[c.leadId] : undefined;
-        if (!o || !outcome.includes(o)) return false;
-      }
-      if (ql) {
-        const haystack = [
-          c.customerName ?? "",
-          c.customerPhone ?? "",
-          c.customerEmail ?? "",
-          ...c.messages.map((m) => m.text),
-        ]
-          .join(" ")
-          .toLowerCase();
-        if (!haystack.includes(ql)) return false;
-      }
-      return true;
-    });
-  }, [chats, q, status, country, outcome, leadOutcomeByLeadId]);
 
   // ─── Sort ─────────────────────────────────────────────────────────────────
   const columns = React.useMemo<ColumnDef<Chat>[]>(() => {
     return [
       {
-        key: "startedAt",
-        label: "Started",
+        key: "id",
+        label: "ID",
         sortable: true,
-        sortAccessor: (r) => r.startedAt,
-        width: 150,
+        width: 100,
         render: (r) => (
-          <div className="flex flex-col leading-tight">
-            <span className="text-fg">{formatDate(r.startedAt.slice(0, 10))}</span>
-            <span className="text-[11px] text-fg-subtle tabular-nums">
-              {formatTime(r.startedAt)}
-            </span>
-          </div>
+          <span className="text-fg-muted tabular-nums">#{r.id.replace("lead_", "L-")}</span>
         ),
       },
       {
         key: "customer",
-        label: "Customer",
+        label: "Name",
         sortable: true,
         sortAccessor: (r) => r.customerName ?? "~",
         render: (r) => (
@@ -172,196 +136,86 @@ export function ChatsTable({
         ),
       },
       {
-        key: "country",
-        label: "Country",
+        key: "vehicle",
+        label: "Vehicle",
         sortable: true,
-        sortAccessor: (r) => r.countryCode ?? "~",
-        width: 110,
-        render: (r) =>
-          r.countryCode ? (
-            <span className="inline-flex items-center justify-center min-w-7 h-5 px-1.5 rounded-sm bg-surface-2 text-[11px] font-mono text-fg-muted">
-              {r.countryCode}
+        sortAccessor: (r) => {
+          const v = vehiclesById[r.vehicleIdsOfInterest[0]];
+          return v ? `${v.make} ${v.model}` : "~";
+        },
+        render: (r) => {
+          const rawId = String(r.vehicleIdsOfInterest[0] || "").trim();
+          if (!rawId) return <span className="text-fg-muted text-xs">—</span>;
+          const v = vehiclesById[rawId];
+          return (
+            <span className="text-fg-muted text-xs">
+              {v ? `${v.make} ${v.model}` : rawId}
             </span>
-          ) : (
-            <span className="text-fg-subtle">—</span>
-          ),
+          );
+        },
       },
       {
-        key: "messages",
-        label: "Msgs",
-        sortable: true,
-        sortAccessor: (r) => r.messages.length,
-        align: "right",
-        width: 70,
-        render: (r) => <span className="tabular-nums">{r.messages.length}</span>,
-      },
-      {
-        key: "temperature",
-        label: "Final temp",
-        sortable: true,
-        sortAccessor: (r) => r.finalTemperature,
-        width: 130,
-        render: (r) => <TemperaturePill temperature={r.finalTemperature} />,
-      },
-      {
-        key: "lead",
-        label: "Lead",
+        key: "summary",
+        label: "Chat Summary",
         sortable: false,
-        width: 110,
-        render: (r) =>
-          r.leadId ? (
-            <span className="text-fg-muted tabular-nums">#{r.leadId.replace("lead_", "L-")}</span>
-          ) : (
-            <span className="text-fg-subtle">—</span>
-          ),
-      },
-      {
-        key: "duration",
-        label: "Duration",
-        sortable: true,
-        sortAccessor: (r) => r.durationSec,
-        align: "right",
-        width: 110,
         render: (r) => (
-          <span className="tabular-nums text-fg-muted">
-            {formatDuration(r.durationSec)}
-          </span>
+          <div className="max-w-[400px] truncate text-xs text-fg-muted leading-relaxed" title={r.aiSummary}>
+            {r.aiSummary || <span className="italic">No summary available</span>}
+          </div>
         ),
       },
     ];
-  }, []);
+  }, [vehiclesById]);
 
   const sorted = React.useMemo(
-    () => sortRows(filtered, columns, sort, dir),
-    [filtered, columns, sort, dir]
+    () => sortRows(chats, columns, sort, dir),
+    [chats, columns, sort, dir]
   );
 
   // ─── Paginate ─────────────────────────────────────────────────────────────
   const total = sorted.length;
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(page, lastPage);
-  const pageStart = (safePage - 1) * PAGE_SIZE;
-  const visible = sorted.slice(pageStart, pageStart + PAGE_SIZE);
+  const visible = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-  // Country options derived from data
-  const countryOptions = React.useMemo(() => {
-    const set = new Set<string>();
-    for (const c of chats) if (c.countryCode) set.add(c.countryCode);
-    return [...set].sort().map((cc) => ({
-      value: cc,
-      label: `${cc} · ${COUNTRY_LABEL[cc] ?? cc}`,
-    }));
-  }, [chats]);
-
-  const hasFilters = !!q || status.length > 0 || outcome.length > 0 || country.length > 0;
-
-  function resetFilters() {
-    setParam({ q: null, status: null, outcome: null, country: null, page: null });
-  }
-
-  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <SearchInput
-          value={q}
-          onChange={(v) => setParam({ q: v || null, page: null })}
-          placeholder="Search name, phone, message…"
-          ariaLabel="Search chats"
+    <Card className="overflow-hidden">
+      <DataTable
+        columns={columns}
+        rows={visible}
+        rowKey={(r) => r.id}
+        onRowClick={(r) => onOpenLead(r.leadId || r.id)}
+        sortKey={sort}
+        sortDir={dir}
+        onSortChange={(k, d) => setParam({ sort: k, dir: d, page: null })}
+        empty={
+          <EmptyState
+            icon={<MessageCircle />}
+            title="No chats yet"
+            description="Conversations from your widget will appear here."
+          />
+        }
+      />
+      <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-2">
+        <Pagination
+          page={safePage}
+          pageSize={PAGE_SIZE}
+          total={total}
+          onChange={(p) => setParam({ page: p === 1 ? null : String(p) })}
         />
-        <FilterMultiSelect
-          label="Status"
-          options={[...TEMPERATURE_OPTIONS]}
-          selected={status}
-          onChange={(v) => setListParam("status", v)}
+        <CsvExportButton
+          rows={sorted}
+          filename={`${tenantSlug}-chats.csv`}
+          columns={[
+            { header: "Customer", value: (r) => r.customerName ?? "" },
+            { header: "Phone", value: (r) => r.customerPhone ?? "" },
+            { header: "Email", value: (r) => r.customerEmail ?? "" },
+            { header: "Temp", value: (r) => r.finalTemperature },
+            { header: "Lead ID", value: (r) => r.leadId ?? "" },
+            { header: "Last Message", value: (r) => r.lastMessageAt },
+          ]}
         />
-        <FilterMultiSelect
-          label="Outcome"
-          options={[...OUTCOME_OPTIONS]}
-          selected={outcome}
-          onChange={(v) => setListParam("outcome", v)}
-        />
-        <FilterMultiSelect
-          label="Country"
-          options={countryOptions}
-          selected={country}
-          onChange={(v) => setListParam("country", v)}
-        />
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={!hasFilters}
-          onClick={resetFilters}
-        >
-          Reset filters
-        </Button>
       </div>
-
-      <Card className="overflow-hidden">
-        <DataTable
-          columns={columns}
-          rows={visible}
-          rowKey={(r) => r.id}
-          onRowClick={(r) => router.push(`/chats/${r.id}`)}
-          sortKey={sort}
-          sortDir={dir}
-          onSortChange={(k, d) => setParam({ sort: k, dir: d, page: null })}
-          empty={
-            <EmptyState
-              icon={<MessageCircle />}
-              title={
-                hasFilters
-                  ? "No chats match your filters"
-                  : "No chats yet"
-              }
-              description={
-                hasFilters
-                  ? "Adjust filters or clear them to see more."
-                  : "Conversations from your widget will appear here."
-              }
-              action={
-                hasFilters ? (
-                  <Button variant="secondary" size="sm" onClick={resetFilters}>
-                    Reset filters
-                  </Button>
-                ) : undefined
-              }
-            />
-          }
-        />
-        <div
-          className={cn(
-            "flex items-center justify-between gap-3 border-t border-border px-4 py-2"
-          )}
-        >
-          <Pagination
-            page={safePage}
-            pageSize={PAGE_SIZE}
-            total={total}
-            onChange={(p) => setParam({ page: p === 1 ? null : String(p) })}
-          />
-          <CsvExportButton
-            rows={sorted}
-            filename={`${tenantSlug}-chats-${formatDate("2026-05-08")}.csv`.replace(/\s+/g, "-")}
-            columns={[
-              { header: "Started", value: (r) => r.startedAt },
-              { header: "Customer", value: (r) => r.customerName ?? "" },
-              { header: "Phone", value: (r) => r.customerPhone ?? "" },
-              { header: "Email", value: (r) => r.customerEmail ?? "" },
-              { header: "Country", value: (r) => r.countryCode ?? "" },
-              { header: "Messages", value: (r) => r.messages.length },
-              { header: "Final temperature", value: (r) => r.finalTemperature },
-              { header: "Lead ID", value: (r) => r.leadId ?? "" },
-              { header: "Duration (sec)", value: (r) => r.durationSec },
-              {
-                header: "Transcript",
-                value: (r) =>
-                  r.messages.map((m) => `[${m.role}] ${m.text}`).join(" | "),
-              },
-            ]}
-          />
-        </div>
-      </Card>
-    </div>
+    </Card>
   );
 }

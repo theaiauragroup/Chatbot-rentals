@@ -259,11 +259,17 @@ export default function ChatWidget({
 
       const savedId = localStorage.getItem('chat_session_id');
       if (savedId) return savedId;
-      const newId = `session-${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+
+      // Generate incrementing AB-001 format
+      const currentCount = parseInt(localStorage.getItem('chat_session_counter') || '0', 10);
+      const nextCount = currentCount + 1;
+      localStorage.setItem('chat_session_counter', nextCount.toString());
+      
+      const newId = `AB-${nextCount.toString().padStart(3, '0')}`;
       localStorage.setItem('chat_session_id', newId);
       return newId;
     }
-    return `session-${Date.now()}`;
+    return 'AB-001';
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);

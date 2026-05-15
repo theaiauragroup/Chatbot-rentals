@@ -98,19 +98,42 @@ export function VehicleForm({ initial, editingId }: VehicleFormProps) {
     }
   }
 
-  function onSubmit(data: FormValues) {
-    if (editingId) {
-      store.updateVehicle(editingId, {
+  function generateVehicleId() {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const letters = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    const numbers = Math.floor(100 + Math.random() * 900);
+    return `${letters}-${numbers}`;
+  }
+
+  async function onSubmit(data: FormValues) {
+    const isUpdate = !!editingId;
+    const vehicleId = editingId || generateVehicleId();
+
+    try {
+      await fetch("https://n8n.srv1147675.hstgr.cloud/webhook/fleetdata", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: isUpdate ? "update" : "create",
+          vehicleId,
+          ...data,
+        }),
+      });
+    } catch (error) {
+      console.error("Webhook error:", error);
+    }
+
+    if (isUpdate) {
+      store.updateVehicle(vehicleId, {
         ...(data as Partial<Vehicle>),
         features: data.features as Feature[],
         photos: data.photos,
       });
       toast.success(toasts.vehicleUpdated);
-      router.push(`/fleets/${editingId}`);
+      router.push(`/fleets/${vehicleId}`);
     } else {
-      const newId = `veh_${Date.now()}`;
       store.addVehicle({
-        id: newId,
+        id: vehicleId,
         make: data.make,
         model: data.model,
         year: data.year,
@@ -128,7 +151,7 @@ export function VehicleForm({ initial, editingId }: VehicleFormProps) {
         createdAt: new Date().toISOString(),
       });
       toast.success(toasts.vehicleAdded);
-      router.push(`/fleets/${newId}`);
+      router.push(`/fleets/${vehicleId}`);
     }
   }
 

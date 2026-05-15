@@ -4,18 +4,7 @@ import * as React from "react";
 import { Plus, X, Car } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Curated Unsplash car photos used as placeholder rotation when "Add photo" is
-// clicked. Real upload flow lands in pass 2.
-const PLACEHOLDER_PHOTOS = [
-  "https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&w=900&q=80",
-];
+
 
 interface PhotoPickerProps {
   photos: string[];
@@ -30,13 +19,46 @@ export function PhotoPicker({
   max = 6,
 }: PhotoPickerProps) {
   const cap = photos.length >= max;
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  function add() {
+  function handleAddClick() {
     if (cap) return;
-    const next =
-      PLACEHOLDER_PHOTOS.find((p) => !photos.includes(p)) ??
-      PLACEHOLDER_PHOTOS[photos.length % PLACEHOLDER_PHOTOS.length];
-    onChange([...photos, next]);
+    fileInputRef.current?.click();
+  }
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const availableSlots = max - photos.length;
+    const filesToProcess = Array.from(files).slice(0, availableSlots);
+
+    const promises = filesToProcess.map((file) => {
+      return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            resolve(e.target.result as string);
+          } else {
+            reject(new Error("Failed to read file"));
+          }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(promises)
+      .then((dataUrls) => {
+        onChange([...photos, ...dataUrls]);
+      })
+      .catch((err) => {
+        console.error("Error reading files:", err);
+      });
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   }
 
   function remove(index: number) {
@@ -63,11 +85,19 @@ export function PhotoPicker({
           </li>
         )}
         <li>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+          />
           <button
             type="button"
-            onClick={add}
+            onClick={handleAddClick}
             disabled={cap}
-            title={cap ? `Maximum ${max} photos` : "Add a photo (placeholder rotation)"}
+            title={cap ? `Maximum ${max} photos` : "Add photo from gallery"}
             className={cn(
               "size-20 rounded-md border border-dashed border-border-strong",
               "inline-flex items-center justify-center text-fg-subtle",

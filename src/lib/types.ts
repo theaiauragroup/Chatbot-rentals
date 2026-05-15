@@ -137,6 +137,7 @@ export interface Chat {
   channel: "web_widget";
   countryCode?: string;
   outcome?: "in_progress" | "closed" | "handed_off";
+  aiSummary?: string;
 }
 
 // ─── Notification ───────────────────────────────────────────────────────────
