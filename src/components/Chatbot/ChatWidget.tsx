@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo, useCallback, useMemo, useLayoutEffect } from 'react';
 import { MessageCircle, X, Send, Mic, StopCircle, ChevronDown, Play, Pause, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
@@ -43,10 +43,9 @@ export default function ChatWidget({
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [userId] = useState(() => {
     if (typeof window !== 'undefined') {
-      // 24-Hour Expiration Logic: Check BEFORE initializing ID or loading messages
       const lastInteraction = localStorage.getItem('chat_last_interaction');
       const oneDayInMs = 24 * 60 * 60 * 1000;
-      
+
       if (lastInteraction && (Date.now() - parseInt(lastInteraction)) > oneDayInMs) {
         localStorage.removeItem('chatMessages');
         localStorage.removeItem('chat_session_id');
@@ -94,10 +93,45 @@ export default function ChatWidget({
     if (messages.length > 1) {
       const toSave = messages.map(m => ({ ...m, audioUrl: undefined }));
       localStorage.setItem('chatMessages', JSON.stringify(toSave));
-      // Update last interaction time
       localStorage.setItem('chat_last_interaction', Date.now().toString());
     }
   }, [messages]);
+
+  // FIXED: Robust URL sanitization for Unsplash and other image URLs
+  const sanitizeImageUrls = (text: string): string => {
+    // Pattern: ![alt](url) where url might be broken across lines or have spaces
+    return text.replace(
+      /!\[([^\]]*)\]\s*\(\s*([^)]+?)\s*\)/g,
+      (match: string, alt: string, url: string) => {
+        // Remove ALL whitespace characters (spaces, newlines, tabs, etc)
+        const cleanUrl = url.replace(/\s+/g, '');
+
+        // Validate it looks like a URL
+        if (!cleanUrl || (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://'))) {
+          return match; // Keep original if not valid
+        }
+
+        return `![${alt}](${cleanUrl})`;
+      }
+    );
+  };
+
+  // FIXED: Extract image URLs with better error handling
+  const extractImageUrls = (text: string): string[] => {
+    const urls: string[] = [];
+    const regex = /!\[[^\]]*\]\(([^)]+)\)/g;
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+      const url = match[1].trim();
+      // Only add valid URLs
+      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        urls.push(url);
+      }
+    }
+
+    return urls;
+  };
 
   const sendMessage = async (content: string, audio?: string, audioType?: string, duration?: number, image?: string) => {
     const userMessage: Message = {
@@ -128,16 +162,13 @@ export default function ChatWidget({
         payload.audio = audio;
         payload.audioType = audioType;
         payload.duration = duration;
-        console.log('Voice Message Payload:', { duration, size: audio.length });
       }
 
       if (image) {
         payload.image = image;
         payload.imageType = 'image';
-        console.log('Image Message Payload:', { type: 'image', size: image.length });
       }
 
-      console.log('Sending Webhook Payload:', { ...payload, audio: audio ? '[BASE64]' : null, image: image ? '[BASE64]' : null });
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -149,31 +180,37 @@ export default function ChatWidget({
       }
 
       const data = await response.json();
-      console.log('Webhook response data:', data);
       const reply = data.reply || data.message || data.output || data.text || (typeof data === 'string' ? data : null) || 'I apologize, but I encountered an error. Please try again.';
 
+      // Pre-process: Convert raw Unsplash URLs into markdown image tags if they aren't already formatted
+      const preProcessedReply = reply.replace(/(?:!?\[.*?\]\()?https:\/\/images\.unsplash\.com\/[^\s\)]+/g, (match: string) => {
+        if (match.startsWith('[')) return match; // Already a markdown link
+        if (match.startsWith('![')) return match; // Already a markdown image
+        return `![Vehicle](${match})`;
+      });
+
       // Super-Sanitizer: Aggressively repairs broken AI markdown tags
-      const sanitizedReply = reply.replace(/!\[([^\]]*)\][\s\n]*\(([\s\S]*?)(?:\)|$)/g, (match: string, alt: string, url: string) => {
+      const sanitizedReply = preProcessedReply.replace(/!\[([^\]]*)\][\s\n]*\(([\s\S]*?)(?:\)|$)/g, (match: string, alt: string, url: string) => {
         // Remove all newlines and spaces from the URL part to make it a valid markdown link
         const cleanUrl = url.replace(/[\s\n\r\t]/g, '').trim();
         if (!cleanUrl) return match; // If we couldn't find a URL, don't break it further
         return `![${alt}](${cleanUrl})`;
       });
 
-      // Extract image metadata using the same robust logic
-      const mdImageRegex = /!\[(.*?)\]\((.*?)\)/g;
-      const extractedUrls = Array.from(sanitizedReply.matchAll(mdImageRegex)).map((m: any) => m[2]);
+      const extractedUrls = extractImageUrls(sanitizedReply);
+
+      console.log('📸 Extracted image URLs:', extractedUrls);
 
       setMessages(prev => [...prev, {
         id: `msg_${Date.now()}_bot`,
         role: 'assistant',
         content: sanitizedReply,
-        // Rule: Assistant messages always use 'text' type to allow ReactMarkdown to handle interleaved images.
         type: 'text',
         imageUrls: extractedUrls,
         timestamp: new Date()
       }]);
-    } catch {
+    } catch (error) {
+      console.error('❌ Send message error:', error);
       setMessages(prev => [...prev, {
         id: `msg_${Date.now()}_err`,
         role: 'assistant',
@@ -196,21 +233,15 @@ export default function ChatWidget({
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    console.log('File selected:', file?.name, file?.type, file?.size);
-    
+
     if (file && file.size <= 5 * 1024 * 1024) {
       const reader = new FileReader();
-      reader.onloadstart = () => console.log('Starting to read image...');
       reader.readAsDataURL(file);
       reader.onloadend = () => {
-        console.log('Image read successfully');
         setSelectedImage(reader.result as string);
-        // Reset input value so same file can be selected again
         e.target.value = '';
       };
-      reader.onerror = (err) => console.error('FileReader error:', err);
     } else if (file) {
-      console.warn('File too large:', file.size);
       alert('Image must be less than 5MB');
       e.target.value = '';
     }
@@ -224,33 +255,28 @@ export default function ChatWidget({
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // Determine best supported MIME type (Safari needs audio/mp4, others prefer audio/webm)
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
-        ? 'audio/webm' 
-        : MediaRecorder.isTypeSupported('audio/mp4') 
-          ? 'audio/mp4' 
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : MediaRecorder.isTypeSupported('audio/mp4')
+          ? 'audio/mp4'
           : '';
 
       const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
-      mediaRecorder.ondataavailable = (event) => { if (event.data.size > 0) audioChunksRef.current.push(event.data); };
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
         reader.onloadend = () => {
-          // Rule: Audio can be raw base64 OR full Data URL. Image MUST have Data URL prefix.
-          const base64Audio = reader.result as string; 
+          const base64Audio = reader.result as string;
           const finalDuration = recordingDurationRef.current;
-          
-          console.log('Voice message ready:', { 
-            type: audioBlob.type, 
-            size: audioBlob.size, 
-            duration: finalDuration 
-          });
 
           sendMessage(`[Voice Message - ${finalDuration}s]`, base64Audio, 'voice', finalDuration);
         };
@@ -331,6 +357,14 @@ export default function ChatWidget({
           overflow-x: auto;
           font-size: 0.82em;
           margin: 0.4em 0;
+        }
+
+        /* NUCLEAR FIX: Prevent image flickering at CSS level */
+        .cw-persistent-image {
+          will-change: auto !important;
+          transform: translateZ(0);
+          backface-visibility: hidden;
+          -webkit-backface-visibility: hidden;
         }
         .cw-md pre code { background: transparent; padding: 0; color: inherit; }
 
@@ -455,108 +489,104 @@ export default function ChatWidget({
               }}
             >
               <div>
-                <AnimatePresence initial={false}>
-                  {messages.map((message, idx) => {
-                    const isUser = message.role === 'user';
-                    const prev = messages[idx - 1];
-                    const isGrouped = prev && prev.role === message.role &&
-                      (message.timestamp.getTime() - prev.timestamp.getTime()) < 120000;
+                {/* CRITICAL: Remove AnimatePresence from messages - it causes re-animation */}
+                {messages.map((message, idx) => {
+                  const isUser = message.role === 'user';
+                  const prev = messages[idx - 1];
+                  const isGrouped = prev && prev.role === message.role &&
+                    (message.timestamp.getTime() - prev.timestamp.getTime()) < 120000;
 
-                    return (
-                      <motion.div
-                        key={message.id}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ type: 'spring', damping: 24, stiffness: 280 }}
-                        className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} ${isGrouped ? 'mt-1' : 'mt-3'}`}
-                      >
-                        <div className={`flex flex-col max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
-                          <div
-                            className="px-3.5 py-2.5 rounded-[18px]"
-                            style={
-                              isUser
-                                ? {
-                                    background: '#2563EB',
-                                    color: '#fff',
-                                    borderBottomRightRadius: 6,
-                                    boxShadow: '0 1px 2px rgba(37,99,235,0.2)'
-                                  }
-                                : {
-                                    background: '#fff',
-                                    color: '#000',
-                                    borderBottomLeftRadius: 6,
-                                    boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.05)'
-                                  }
-                            }
-                          >
-                            {message.type === 'voice' && message.audioUrl ? (
-                              <VoicePlayer
-                                audioUrl={message.audioUrl}
-                                duration={message.duration || 0}
-                                role={message.role}
-                              />
-                            ) : (message.type === 'image' && isUser) ? (
-                              <div className="space-y-3 -mx-1 -my-0.5">
-                                <div className="flex flex-col gap-2">
-                                  {message.imageUrls && message.imageUrls.length > 0 ? (
-                                    message.imageUrls.map((url, i) => (
-                                      <div key={i} className="rounded-xl overflow-hidden bg-black/[0.03]">
-                                        <ChatImage src={url} alt={`Image ${i + 1}`} />
-                                      </div>
-                                    ))
-                                  ) : (message.imageUrl || message.audioUrl) ? (
-                                    <div className="rounded-xl overflow-hidden bg-black/[0.03]">
-                                      <ChatImage src={message.imageUrl || message.audioUrl || ''} alt="Uploaded image" />
+                  return (
+                    <div
+                      key={message.id}
+                      className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} ${isGrouped ? 'mt-1' : 'mt-3'}`}
+                    >
+                      <div className={`flex flex-col max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
+                        <div
+                          className="px-3.5 py-2.5 rounded-[18px]"
+                          style={
+                            isUser
+                              ? {
+                                background: '#2563EB',
+                                color: '#fff',
+                                borderBottomRightRadius: 6,
+                                boxShadow: '0 1px 2px rgba(37,99,235,0.2)'
+                              }
+                              : {
+                                background: '#fff',
+                                color: '#000',
+                                borderBottomLeftRadius: 6,
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.05)'
+                              }
+                          }
+                        >
+                          {message.type === 'voice' && message.audioUrl ? (
+                            <VoicePlayer
+                              audioUrl={message.audioUrl}
+                              duration={message.duration || 0}
+                              role={message.role}
+                            />
+                          ) : (message.type === 'image' && isUser) ? (
+                            <div className="space-y-3 -mx-1 -my-0.5">
+                              <div className="flex flex-col gap-2">
+                                {message.imageUrls && message.imageUrls.length > 0 ? (
+                                  message.imageUrls.map((url, i) => (
+                                    <div key={i} className="rounded-xl overflow-hidden bg-black/[0.03]">
+                                      <ChatImage src={url} alt={`Image ${i + 1}`} messageId={message.id} />
                                     </div>
-                                  ) : null}
+                                  ))
+                                ) : (message.imageUrl || message.audioUrl) ? (
+                                  <div className="rounded-xl overflow-hidden bg-black/[0.03]">
+                                    <ChatImage src={message.imageUrl || message.audioUrl || ''} alt="Uploaded image" messageId={message.id} />
+                                  </div>
+                                ) : null}
+                              </div>
+                              {message.content && message.content !== '[Image Message]' && (
+                                <div className={`text-[13.5px] leading-[1.5] px-1 ${isUser ? 'text-white' : 'text-black'}`}>
+                                  {message.content}
                                 </div>
-                                {message.content && message.content !== '[Image Message]' && (
-                                  <div className={`text-[13.5px] leading-[1.5] px-1 ${isUser ? 'text-white' : 'text-black'}`}>
+                              )}
+                            </div>
+                          ) : (
+                            <div className={`text-[13.5px] leading-[1.5] ${isUser ? 'text-white' : 'text-black'}`}>
+                              {message.role === 'assistant' ? (
+                                <div className="cw-md">
+                                  <ReactMarkdown
+                                    components={{
+                                      p: ({ children }) => <div className="mb-2 last:mb-0">{children}</div>,
+                                      img: ({ src, alt }) => (
+                                        <div className="my-2.5 -mx-1 rounded-xl overflow-hidden bg-black/[0.03]">
+                                          <ChatImage src={(src as string) || ''} alt={(alt as string) || ''} messageId={message.id} />
+                                        </div>
+                                      )
+                                    }}
+                                  >
                                     {message.content}
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className={`text-[13.5px] leading-[1.5] ${isUser ? 'text-white' : 'text-black'}`}>
-                                {message.role === 'assistant' ? (
-                                  <div className="cw-md">
-                                    <ReactMarkdown
-                                      components={{
-                                        p: ({ children }) => <div className="mb-2 last:mb-0">{children}</div>,
-                                        img: ({ src, alt }) => (
-                                          <div className="my-2.5 -mx-1 rounded-xl overflow-hidden bg-black/[0.03]">
-                                            <ChatImage src={(src as string) || ''} alt={(alt as string) || ''} />
-                                          </div>
-                                        )
-                                      }}
-                                    >
-                                      {message.content}
-                                    </ReactMarkdown>
-                                  </div>
-                                ) : (
-                                  message.content
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {!isGrouped && (
-                            <div className="flex items-center gap-1 mt-1 px-1">
-                              <span className="cw-mono text-[9.5px] text-black/35 tabular-nums">
-                                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                              {isUser && (
-                                <svg className="w-[11px] h-[11px]" fill="none" stroke="#2563EB" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                </svg>
+                                  </ReactMarkdown>
+                                </div>
+                              ) : (
+                                message.content
                               )}
                             </div>
                           )}
                         </div>
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
+
+                        {!isGrouped && (
+                          <div className="flex items-center gap-1 mt-1 px-1">
+                            <span className="cw-mono text-[9.5px] text-black/35 tabular-nums">
+                              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            {isUser && (
+                              <svg className="w-[11px] h-[11px]" fill="none" stroke="#2563EB" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
 
                 {isLoading && (
                   <motion.div
@@ -634,10 +664,7 @@ export default function ChatWidget({
                       className="hidden"
                     />
                     <button
-                      onClick={() => {
-                        console.log('Attach button clicked');
-                        fileInputRef.current?.click();
-                      }}
+                      onClick={() => fileInputRef.current?.click()}
                       className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-black/45 hover:text-black hover:bg-white active:scale-95 transition-all"
                       aria-label="Attach image"
                     >
@@ -744,7 +771,7 @@ export default function ChatWidget({
   );
 }
 
-function VoicePlayer({
+const VoicePlayer = memo(function VoicePlayer({
   audioUrl,
   duration,
   role
@@ -776,7 +803,8 @@ function VoicePlayer({
   }, []);
 
   const isUser = role === 'user';
-  const bars = [30, 55, 40, 70, 50, 80, 45, 65, 75, 55, 85, 50, 70, 60, 45, 75, 55, 65, 40, 50];
+  // Memoize bars to prevent re-creation on every render
+  const bars = useMemo(() => [30, 55, 40, 70, 50, 80, 45, 65, 75, 55, 85, 50, 70, 60, 45, 75, 55, 65, 40, 50], []);
 
   return (
     <div className="flex items-center gap-2.5 min-w-[180px] py-0.5">
@@ -828,36 +856,98 @@ function VoicePlayer({
       </span>
     </div>
   );
-}
+});
 
-function ChatImage({ src, alt }: { src: string; alt: string }) {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [hasError, setHasError] = useState(false);
+// NUCLEAR FIX: Use layoutEffect + ref to persist DOM elements and bypass React reconciliation
+function ChatImage({ src, alt, messageId }: { src: string; alt: string; messageId: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const loadedRef = useRef(false);
+  
+  // Helper function to optimize image URLs (must be defined before use)
+  const getOptimizedUrl = (url: string): string => {
+    if (url.includes('unsplash.com')) {
+      try {
+        const urlObj = new URL(url);
+        urlObj.searchParams.set('w', '600');
+        urlObj.searchParams.set('q', '80');
+        urlObj.searchParams.set('fm', 'jpg');
+        urlObj.searchParams.set('fit', 'max');
+        return urlObj.toString();
+      } catch {
+        return url;
+      }
+    }
+    return url;
+  };
+  
+  // CRITICAL: useLayoutEffect runs synchronously BEFORE browser paint
+  useLayoutEffect(() => {
+    // If image already exists and src hasn't changed, do NOTHING
+    if (imgRef.current && imgRef.current.src === getOptimizedUrl(src) && loadedRef.current) {
+      return;
+    }
+
+    // Create or update image element
+    if (!imgRef.current) {
+      imgRef.current = document.createElement('img');
+      imgRef.current.className = 'cw-persistent-image max-w-full h-auto block cursor-pointer';
+      imgRef.current.style.cssText = 'max-height: 400px; object-fit: contain; transition: opacity 0.7s ease-out;';
+      imgRef.current.crossOrigin = 'anonymous';
+      imgRef.current.loading = 'lazy';
+      
+      imgRef.current.onclick = () => window.open(src, '_blank');
+      
+      imgRef.current.onload = () => {
+        loadedRef.current = true;
+        if (imgRef.current) {
+          imgRef.current.style.opacity = '1';
+        }
+        // Remove spinner
+        const spinner = containerRef.current?.querySelector('.spinner');
+        if (spinner) spinner.remove();
+      };
+      
+      imgRef.current.onerror = () => {
+        if (containerRef.current && imgRef.current) {
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'p-6 text-center';
+          errorDiv.innerHTML = `
+            <p class="text-[11px] text-black/40 font-medium mb-2">Image unavailable</p>
+            <p class="text-[9px] text-black/25 font-mono break-all px-2">${src.substring(0, 50)}...</p>
+          `;
+          containerRef.current.innerHTML = '';
+          containerRef.current.appendChild(errorDiv);
+        }
+      };
+
+      // Set initial opacity
+      imgRef.current.style.opacity = '0';
+    }
+
+    // Update src
+    imgRef.current.src = getOptimizedUrl(src);
+    imgRef.current.alt = alt;
+
+    // Add to DOM if not already there
+    if (containerRef.current && !containerRef.current.contains(imgRef.current)) {
+      // Add spinner first
+      const spinner = document.createElement('div');
+      spinner.className = 'spinner absolute inset-0 flex items-center justify-center bg-black/[0.03]';
+      spinner.innerHTML = '<div class="w-5 h-5 border-2 border-black/10 border-t-black/40 rounded-full animate-spin"></div>';
+      containerRef.current.appendChild(spinner);
+      
+      containerRef.current.appendChild(imgRef.current);
+    }
+
+  }, [src, alt, messageId]);
 
   return (
-    <div className="relative min-h-[160px] w-full flex items-center justify-center overflow-hidden">
-      {!isLoaded && !hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/[0.03]">
-          <div className="w-5 h-5 border-2 border-black/10 border-t-black/40 rounded-full animate-spin" />
-        </div>
-      )}
-      
-      {hasError ? (
-        <div className="p-6 text-center">
-          <p className="text-[11px] text-black/40 font-medium">Image unavailable</p>
-        </div>
-      ) : (
-        <img
-          src={src}
-          alt={alt}
-          onLoad={() => setIsLoaded(true)}
-          onError={() => setHasError(true)}
-          className={`max-w-full h-auto block cursor-pointer transition-all duration-700 ease-out ${
-            isLoaded ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-[1.05] blur-2xl'
-          } hover:scale-[1.03] active:scale-[0.98]`}
-          onClick={() => window.open(src, '_blank')}
-        />
-      )}
-    </div>
+    <div 
+      ref={containerRef} 
+      className="relative min-h-[160px] w-full flex items-center justify-center overflow-hidden"
+      data-message-id={messageId}
+      data-src={src}
+    />
   );
 }
