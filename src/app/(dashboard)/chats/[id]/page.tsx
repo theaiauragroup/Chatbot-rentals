@@ -132,21 +132,23 @@ export default async function TranscriptPage({ params }: PageProps) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <TemperaturePill temperature={lead.temperature} />
+                  <TemperaturePill temperature={lead.temperature || "cold"} />
                   <span className="text-fg-muted">·</span>
-                  <span className="text-fg-muted">{outcomeLabel(lead.outcome)}</span>
+                  <span className="text-fg-muted">{outcomeLabel(lead.outcome || "open")}</span>
                 </div>
                 <div className="flex flex-col gap-1 text-fg-muted">
                   <span>
                     Pickup{" "}
                     <span className="text-fg">
-                      {formatDateRange(lead.trip.pickupDate, lead.trip.returnDate)}
+                      {(lead.trip.pickupDate && lead.trip.returnDate) 
+                        ? formatDateRange(lead.trip.pickupDate, lead.trip.returnDate)
+                        : "—"}
                     </span>
                   </span>
                   <span>
                     Estimated value{" "}
                     <span className="text-fg font-medium tabular-nums">
-                      {formatUsd(lead.estimatedValueUsd)}
+                      {formatUsd(lead.estimatedValueUsd || 0)}
                     </span>
                   </span>
                 </div>
