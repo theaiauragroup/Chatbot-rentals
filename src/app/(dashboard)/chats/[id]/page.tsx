@@ -116,7 +116,7 @@ export default async function TranscriptPage({ params }: PageProps) {
             {lead ? (
               <div className="px-4 pb-4 flex flex-col gap-3 text-xs">
                 <div className="flex items-center gap-2.5">
-                  <Avatar name={lead.customerName} size="md" />
+                  <Avatar name={lead.customerName || "Anonymous"} size="md" />
                   <div className="flex flex-col min-w-0 leading-tight">
                     <span className="text-sm font-medium text-fg truncate">
                       {lead.customerName}
