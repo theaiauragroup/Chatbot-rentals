@@ -25,6 +25,211 @@ interface ChatWidgetProps {
   welcomeMessage?: string;
 }
 
+// --- OPTIMIZED SUB-COMPONENTS ---
+
+const ChatImage = memo(({ src, alt, messageId }: { src: string; alt: string; messageId: string }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  
+  const optimizedUrl = useMemo(() => {
+    if (src.includes('unsplash.com')) {
+      try {
+        const urlObj = new URL(src);
+        urlObj.searchParams.set('w', '800');
+        urlObj.searchParams.set('q', '85');
+        urlObj.searchParams.set('fm', 'webp');
+        urlObj.searchParams.set('fit', 'max');
+        return urlObj.toString();
+      } catch { return src; }
+    }
+    return src;
+  }, [src]);
+
+  return (
+    <div className="relative min-h-[200px] w-full flex items-center justify-center overflow-hidden bg-black/[0.03] rounded-xl transition-all duration-300">
+      {!isLoaded && !hasError && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-6 h-6 border-2 border-black/10 border-t-black/40 rounded-full animate-spin"></div>
+        </div>
+      )}
+      
+      {hasError ? (
+        <div className="p-6 text-center">
+          <p className="text-[11px] text-black/40 font-medium mb-2">Image unavailable</p>
+          <p className="text-[9px] text-black/25 font-mono break-all px-4">{src.substring(0, 50)}...</p>
+        </div>
+      ) : (
+        <img
+          src={optimizedUrl}
+          alt={alt}
+          onLoad={() => setIsLoaded(true)}
+          onError={() => setHasError(true)}
+          onClick={() => window.open(src, '_blank')}
+          className={`max-w-full h-auto block cursor-pointer transition-all duration-700 ease-out ${isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.98]'}`}
+          style={{ maxHeight: '420px', objectFit: 'contain' }}
+          loading="lazy"
+        />
+      )}
+    </div>
+  );
+});
+ChatImage.displayName = 'ChatImage';
+
+const MessageItem = memo(({ message, isGrouped }: { message: Message; isGrouped: boolean }) => {
+  const isUser = message.role === 'user';
+  
+  const markdownComponents = useMemo(() => ({
+    p: ({ children }: any) => <div className="mb-2 last:mb-0">{children}</div>,
+    img: ({ src, alt }: any) => (
+      <div className="my-3 -mx-1">
+        <ChatImage src={src || ''} alt={alt || ''} messageId={message.id} />
+      </div>
+    ),
+    a: ({ href, children }: any) => (
+      <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-800 transition-colors">
+        {children}
+      </a>
+    )
+  }), [message.id]);
+
+  return (
+    <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} ${isGrouped ? 'mt-1' : 'mt-4'}`}>
+      <div className={`flex flex-col max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
+        <div
+          className="px-4 py-3 rounded-[20px]"
+          style={
+            isUser
+              ? {
+                background: '#2563EB',
+                color: '#fff',
+                borderBottomRightRadius: 6,
+                boxShadow: '0 2px 4px rgba(37,99,235,0.15)'
+              }
+              : {
+                background: '#fff',
+                color: '#000',
+                borderBottomLeftRadius: 6,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)'
+              }
+          }
+        >
+          {message.type === 'voice' && message.audioUrl ? (
+            <VoicePlayer
+              audioUrl={message.audioUrl}
+              duration={message.duration || 0}
+              role={message.role}
+            />
+          ) : (message.type === 'image' && isUser) ? (
+            <div className="space-y-3 -mx-1 -my-0.5">
+              <div className="flex flex-col gap-2">
+                {message.imageUrls && message.imageUrls.length > 0 ? (
+                  message.imageUrls.map((url, i) => (
+                    <ChatImage key={i} src={url} alt={`Image ${i + 1}`} messageId={message.id} />
+                  ))
+                ) : (message.imageUrl || message.audioUrl) ? (
+                  <ChatImage src={message.imageUrl || message.audioUrl || ''} alt="Uploaded image" messageId={message.id} />
+                ) : null}
+              </div>
+              {message.content && message.content !== '[Image Message]' && (
+                <div className={`text-[14px] leading-[1.5] px-1 ${isUser ? 'text-white' : 'text-black'}`}>
+                  {message.content}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className={`text-[14px] leading-[1.5] ${isUser ? 'text-white' : 'text-black'}`}>
+              {message.role === 'assistant' ? (
+                <div className="cw-md">
+                  <ReactMarkdown components={markdownComponents}>
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                message.content
+              )}
+            </div>
+          )}
+        </div>
+
+        {!isGrouped && (
+          <div className="flex items-center gap-1.5 mt-1.5 px-1.5">
+            <span className="cw-mono text-[10px] text-black/30 tabular-nums">
+              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+            {isUser && (
+              <svg className="w-[12px] h-[12px]" fill="none" stroke="#2563EB" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+MessageItem.displayName = 'MessageItem';
+
+const MessageList = memo(({ messages, isLoading }: { messages: Message[], isLoading: boolean }) => {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Immediate scroll on message count change or loading state change
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    
+    // Fallback scroll after a small delay for images/dynamic content
+    const timer = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 150);
+    
+    return () => clearTimeout(timer);
+  }, [messages.length, isLoading]);
+
+  return (
+    <div
+      className="cw-scroll flex-1 overflow-y-auto overscroll-contain px-4 md:px-5 py-6"
+      style={{
+        background: '#FAFAFA',
+        WebkitOverflowScrolling: 'touch'
+      }}
+    >
+      <div className="flex flex-col">
+        {messages.map((message, idx) => {
+          const prev = messages[idx - 1];
+          const isGrouped = prev && prev.role === message.role &&
+            (message.timestamp.getTime() - prev.timestamp.getTime()) < 120000;
+          
+          return (
+            <MessageItem 
+              key={message.id} 
+              message={message} 
+              isGrouped={isGrouped} 
+            />
+          );
+        })}
+
+        {isLoading && (
+          <div className="flex justify-start mt-4">
+            <div
+              className="rounded-[20px] px-4 py-3 bg-white flex items-center gap-1.5"
+              style={{
+                borderBottomLeftRadius: 6,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)'
+              }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-black/25" style={{ animation: 'cw-dot 1.4s ease-in-out infinite', animationDelay: '0s' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-black/25" style={{ animation: 'cw-dot 1.4s ease-in-out infinite', animationDelay: '0.2s' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-black/25" style={{ animation: 'cw-dot 1.4s ease-in-out infinite', animationDelay: '0.4s' }} />
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} className="h-4 shrink-0" />
+      </div>
+    </div>
+  );
+});
+MessageList.displayName = 'MessageList';
+
 export default function ChatWidget({
   isOpen,
   onToggle,
@@ -61,7 +266,6 @@ export default function ChatWidget({
     return `session-${Date.now()}`;
   });
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -84,10 +288,6 @@ export default function ChatWidget({
       }
     }
   }, []);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   useEffect(() => {
     if (messages.length > 1) {
@@ -481,137 +681,7 @@ export default function ChatWidget({
               </div>
             </div>
 
-            <div
-              className="cw-scroll flex-1 overflow-y-auto overscroll-contain px-4 md:px-5 py-5"
-              style={{
-                background: '#FAFAFA',
-                WebkitOverflowScrolling: 'touch'
-              }}
-            >
-              <div>
-                {/* CRITICAL: Remove AnimatePresence from messages - it causes re-animation */}
-                {messages.map((message, idx) => {
-                  const isUser = message.role === 'user';
-                  const prev = messages[idx - 1];
-                  const isGrouped = prev && prev.role === message.role &&
-                    (message.timestamp.getTime() - prev.timestamp.getTime()) < 120000;
-
-                  return (
-                    <div
-                      key={message.id}
-                      className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} ${isGrouped ? 'mt-1' : 'mt-3'}`}
-                    >
-                      <div className={`flex flex-col max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
-                        <div
-                          className="px-3.5 py-2.5 rounded-[18px]"
-                          style={
-                            isUser
-                              ? {
-                                background: '#2563EB',
-                                color: '#fff',
-                                borderBottomRightRadius: 6,
-                                boxShadow: '0 1px 2px rgba(37,99,235,0.2)'
-                              }
-                              : {
-                                background: '#fff',
-                                color: '#000',
-                                borderBottomLeftRadius: 6,
-                                boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.05)'
-                              }
-                          }
-                        >
-                          {message.type === 'voice' && message.audioUrl ? (
-                            <VoicePlayer
-                              audioUrl={message.audioUrl}
-                              duration={message.duration || 0}
-                              role={message.role}
-                            />
-                          ) : (message.type === 'image' && isUser) ? (
-                            <div className="space-y-3 -mx-1 -my-0.5">
-                              <div className="flex flex-col gap-2">
-                                {message.imageUrls && message.imageUrls.length > 0 ? (
-                                  message.imageUrls.map((url, i) => (
-                                    <div key={i} className="rounded-xl overflow-hidden bg-black/[0.03]">
-                                      <ChatImage src={url} alt={`Image ${i + 1}`} messageId={message.id} />
-                                    </div>
-                                  ))
-                                ) : (message.imageUrl || message.audioUrl) ? (
-                                  <div className="rounded-xl overflow-hidden bg-black/[0.03]">
-                                    <ChatImage src={message.imageUrl || message.audioUrl || ''} alt="Uploaded image" messageId={message.id} />
-                                  </div>
-                                ) : null}
-                              </div>
-                              {message.content && message.content !== '[Image Message]' && (
-                                <div className={`text-[13.5px] leading-[1.5] px-1 ${isUser ? 'text-white' : 'text-black'}`}>
-                                  {message.content}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className={`text-[13.5px] leading-[1.5] ${isUser ? 'text-white' : 'text-black'}`}>
-                              {message.role === 'assistant' ? (
-                                <div className="cw-md">
-                                  <ReactMarkdown
-                                    components={{
-                                      p: ({ children }) => <div className="mb-2 last:mb-0">{children}</div>,
-                                      img: ({ src, alt }) => (
-                                        <div className="my-2.5 -mx-1 rounded-xl overflow-hidden bg-black/[0.03]">
-                                          <ChatImage src={(src as string) || ''} alt={(alt as string) || ''} messageId={message.id} />
-                                        </div>
-                                      )
-                                    }}
-                                  >
-                                    {message.content}
-                                  </ReactMarkdown>
-                                </div>
-                              ) : (
-                                message.content
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {!isGrouped && (
-                          <div className="flex items-center gap-1 mt-1 px-1">
-                            <span className="cw-mono text-[9.5px] text-black/35 tabular-nums">
-                              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                            {isUser && (
-                              <svg className="w-[11px] h-[11px]" fill="none" stroke="#2563EB" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {isLoading && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="flex justify-start mt-3"
-                  >
-                    <div
-                      className="rounded-[18px] px-3.5 py-3 bg-white flex items-center gap-1.5"
-                      style={{
-                        borderBottomLeftRadius: 6,
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.05)'
-                      }}
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-black/30" style={{ animation: 'cw-dot 1.4s ease-in-out infinite', animationDelay: '0s' }} />
-                      <span className="w-1.5 h-1.5 rounded-full bg-black/30" style={{ animation: 'cw-dot 1.4s ease-in-out infinite', animationDelay: '0.2s' }} />
-                      <span className="w-1.5 h-1.5 rounded-full bg-black/30" style={{ animation: 'cw-dot 1.4s ease-in-out infinite', animationDelay: '0.4s' }} />
-                    </div>
-                  </motion.div>
-                )}
-
-                <div ref={messagesEndRef} className="h-px" />
-              </div>
-            </div>
+            <MessageList messages={messages} isLoading={isLoading} />
 
             <div
               className="shrink-0 bg-white border-t border-black/[0.06] px-4 md:px-5"
@@ -857,97 +927,3 @@ const VoicePlayer = memo(function VoicePlayer({
     </div>
   );
 });
-
-// NUCLEAR FIX: Use layoutEffect + ref to persist DOM elements and bypass React reconciliation
-function ChatImage({ src, alt, messageId }: { src: string; alt: string; messageId: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const imgRef = useRef<HTMLImageElement | null>(null);
-  const loadedRef = useRef(false);
-  
-  // Helper function to optimize image URLs (must be defined before use)
-  const getOptimizedUrl = (url: string): string => {
-    if (url.includes('unsplash.com')) {
-      try {
-        const urlObj = new URL(url);
-        urlObj.searchParams.set('w', '600');
-        urlObj.searchParams.set('q', '80');
-        urlObj.searchParams.set('fm', 'jpg');
-        urlObj.searchParams.set('fit', 'max');
-        return urlObj.toString();
-      } catch {
-        return url;
-      }
-    }
-    return url;
-  };
-  
-  // CRITICAL: useLayoutEffect runs synchronously BEFORE browser paint
-  useLayoutEffect(() => {
-    // If image already exists and src hasn't changed, do NOTHING
-    if (imgRef.current && imgRef.current.src === getOptimizedUrl(src) && loadedRef.current) {
-      return;
-    }
-
-    // Create or update image element
-    if (!imgRef.current) {
-      imgRef.current = document.createElement('img');
-      imgRef.current.className = 'cw-persistent-image max-w-full h-auto block cursor-pointer';
-      imgRef.current.style.cssText = 'max-height: 400px; object-fit: contain; transition: opacity 0.7s ease-out;';
-      imgRef.current.crossOrigin = 'anonymous';
-      imgRef.current.loading = 'lazy';
-      
-      imgRef.current.onclick = () => window.open(src, '_blank');
-      
-      imgRef.current.onload = () => {
-        loadedRef.current = true;
-        if (imgRef.current) {
-          imgRef.current.style.opacity = '1';
-        }
-        // Remove spinner
-        const spinner = containerRef.current?.querySelector('.spinner');
-        if (spinner) spinner.remove();
-      };
-      
-      imgRef.current.onerror = () => {
-        if (containerRef.current && imgRef.current) {
-          const errorDiv = document.createElement('div');
-          errorDiv.className = 'p-6 text-center';
-          errorDiv.innerHTML = `
-            <p class="text-[11px] text-black/40 font-medium mb-2">Image unavailable</p>
-            <p class="text-[9px] text-black/25 font-mono break-all px-2">${src.substring(0, 50)}...</p>
-          `;
-          containerRef.current.innerHTML = '';
-          containerRef.current.appendChild(errorDiv);
-        }
-      };
-
-      // Set initial opacity
-      imgRef.current.style.opacity = '0';
-    }
-
-    // Update src
-    imgRef.current.src = getOptimizedUrl(src);
-    imgRef.current.alt = alt;
-
-    // Add to DOM if not already there
-    if (containerRef.current && !containerRef.current.contains(imgRef.current)) {
-      // Add spinner first
-      const spinner = document.createElement('div');
-      spinner.className = 'spinner absolute inset-0 flex items-center justify-center bg-black/[0.03]';
-      spinner.innerHTML = '<div class="w-5 h-5 border-2 border-black/10 border-t-black/40 rounded-full animate-spin"></div>';
-      containerRef.current.appendChild(spinner);
-      
-      containerRef.current.appendChild(imgRef.current);
-    }
-
-  }, [src, alt, messageId]);
-
-  return (
-    <div 
-      ref={containerRef} 
-      className="relative min-h-[160px] w-full flex items-center justify-center overflow-hidden"
-      data-message-id={messageId}
-      data-src={src}
-    />
-  );
-}
