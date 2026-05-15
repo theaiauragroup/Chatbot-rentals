@@ -184,7 +184,8 @@ function LeadsViewInner({
       estimatedValueUsd: find("Estimated Value (USD)", "Estimated Value", "value", "Value")
         ? Number(String(find("Estimated Value (USD)", "Estimated Value", "value", "Value")).replace(/[^0-9.]/g, ''))
         : undefined,
-      managerNotes: find("Chat Summary", "notes", "Summary", "Conversation Summary") || "",
+      aiSummary: find("Chat Summary", "Summary", "Conversation Summary"),
+      managerNotes: find("Manager Notes", "Notes", "Internal Notes"),
       createdAt: find("Created At", "Date", "Created"),
       updatedAt: find("Last Activity At", "Timestamp", "Updated At", "Last Updated"),
       source: "web_widget",

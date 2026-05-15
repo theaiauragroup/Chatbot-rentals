@@ -351,13 +351,13 @@ function LeadDrawerBody({
       </Card>
 
       {/* Chat Summary */}
-      {lead.managerNotes && (
+      {lead.aiSummary && (
         <Card variant="flat">
           <div className="px-4 pt-3 pb-2 text-sm font-semibold text-fg">
             Chat Summary
           </div>
           <div className="px-4 pb-3.5 text-[13px] text-fg-muted leading-relaxed cw-md">
-            <ReactMarkdown>{lead.managerNotes}</ReactMarkdown>
+            <ReactMarkdown>{lead.aiSummary}</ReactMarkdown>
           </div>
         </Card>
       )}

@@ -75,7 +75,8 @@ export function DashboardView() {
         ? [String(find("Vehicle interest", "Car of Interest", "Vehicle", "Car"))] 
         : [],
       estimatedValueUsd: Number(String(find("Estimated Value (USD)", "Estimated Value", "value") || "0").replace(/[^0-9.]/g, '')),
-      managerNotes: find("Chat Summary", "notes") || "",
+      aiSummary: find("Chat Summary", "Summary", "Conversation Summary"),
+      managerNotes: find("Manager Notes", "Notes", "Internal Notes"),
       createdAt: find("Created At", "Date") || new Date().toISOString(),
       updatedAt: find("Last Activity At", "Timestamp") || new Date().toISOString(),
       source: "web_widget",

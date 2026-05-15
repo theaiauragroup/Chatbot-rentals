@@ -41,6 +41,7 @@ export interface Lead {
   };
   vehicleInterestIds: ID[];
   estimatedValueUsd?: number;
+  aiSummary?: string;
   managerNotes?: string;
   createdAt?: ISODateTime;
   updatedAt?: ISODateTime;
