@@ -424,7 +424,12 @@ export default function ChatWidget({
         .split('\n')
         .map((line: string) => {
           const trimmed = line.trim();
+          // Remove stray closing brackets/parens
           if (trimmed === ')' || trimmed === ']]' || trimmed === ']' || trimmed === '))') return '';
+          // Remove the literal word "Image" or "Image:" used as a label by the webhook
+          if (/^image\s*:?\s*$/i.test(trimmed)) return '';
+          // Remove orphaned bracket artifacts like "![" or "![ " that are not full image tags
+          if (/^!\[\s*$/.test(trimmed)) return '';
           return line;
         })
         .join('\n')
