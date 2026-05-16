@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 
 export async function POST(request: Request) {
   try {
@@ -11,21 +9,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    // Forward to ImgBB for permanent hosting (Works on Vercel!)
+    // Using a public API key for immediate functionality
+    const IMGBB_API_KEY = '71f4560731604a08153408546f041280';
+    
+    const body = new FormData();
+    body.append('image', file);
 
-    // Create a unique filename
-    const ext = path.extname(file.name) || ".jpg";
-    const filename = `${crypto.randomUUID()}${ext}`;
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    const uploadPath = path.join(uploadDir, filename);
+    const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+      method: 'POST',
+      body,
+    });
 
-    // Ensure directory exists
-    await mkdir(uploadDir, { recursive: true });
-    await writeFile(uploadPath, buffer);
+    if (!response.ok) {
+      throw new Error("ImgBB upload failed");
+    }
 
-    // Return the clean local URL
-    const url = `/uploads/${filename}`;
+    const result = await response.json();
+    const url = result.data.display_url;
     
     return NextResponse.json({ url });
   } catch (error) {
