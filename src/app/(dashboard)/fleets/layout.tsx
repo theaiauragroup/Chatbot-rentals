@@ -1,6 +1,12 @@
-import * as React from "react";
 import { FleetProvider } from "@/components/fleets/FleetStore";
+import { getVehicles } from "@/lib/api";
 
-export default function FleetsLayout({ children }: { children: React.ReactNode }) {
-  return <FleetProvider initialVehicles={[]}>{children}</FleetProvider>;
+export default async function FleetsLayout({ children }: { children: React.ReactNode }) {
+  const vehicles = await getVehicles();
+  
+  return (
+    <FleetProvider initialVehicles={vehicles}>
+      {children}
+    </FleetProvider>
+  );
 }

@@ -74,7 +74,7 @@ function ChatsViewInner(props: ChatsViewProps) {
 
   // Fetch chats and leads on mount
   React.useEffect(() => {
-    async function fetchData(isSilent = false) {
+    async function fetchChats(isSilent = false) {
       if (isSilent) setIsBackgroundFetching(true);
       else setIsInitialLoading(true);
       
@@ -111,10 +111,10 @@ function ChatsViewInner(props: ChatsViewProps) {
       }
     }
 
-    fetchData();
-    const interval = setInterval(() => fetchData(true), 30000);
+    fetchChats(chats.length > 0);
+    const interval = setInterval(() => fetchChats(true), 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [chats.length]);
 
   function mapWebhookChat(raw: any, index: number): Chat {
     const normalizedRaw: any = {};

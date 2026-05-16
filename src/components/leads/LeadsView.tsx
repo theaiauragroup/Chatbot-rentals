@@ -112,12 +112,12 @@ function LeadsViewInner({
     }
 
     // Initial load
-    fetchLeads();
+    fetchLeads(store.leads.length > 0);
 
     // Auto-refresh every 30 seconds for a 'live' feel
     const interval = setInterval(() => fetchLeads(true), 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [store.leads.length]);
 
   // Helper to map external data to internal Lead interface
   function mapWebhookLead(raw: any): Lead {

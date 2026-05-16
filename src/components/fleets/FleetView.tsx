@@ -134,10 +134,10 @@ export function FleetView() {
       }
     }
 
-    fetchVehicles();
+    fetchVehicles(store.vehicles.length > 0);
     const interval = setInterval(() => fetchVehicles(true), 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [store.vehicles.length]);
 
   function mapWebhookVehicle(raw: any): Vehicle {
     const normalized: any = {};

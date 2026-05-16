@@ -1,20 +1,22 @@
-import * as React from "react";
 import { ChatsView } from "@/components/chat/ChatsView";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { chats, leads, tenant, vehicles } from "@/lib/mock";
+import { getChats, getLeads, getVehicles } from "@/lib/api";
 
 export const metadata = { title: "Chat history · AIAURA FLEETS" };
 
-export default function ChatsPage() {
+export default async function ChatsPage() {
+  const [chats, leads, vehicles] = await Promise.all([
+    getChats(),
+    getLeads(),
+    getVehicles()
+  ]);
+
   return (
-    <React.Suspense fallback={<Skeleton className="h-[600px] w-full" />}>
-      <ChatsView
-        initialChats={chats}
-        initialLeads={leads}
-        initialVehicles={vehicles}
-        tenantSlug={tenant.slug}
-      />
-    </React.Suspense>
+    <ChatsView
+      initialChats={chats}
+      initialLeads={leads}
+      initialVehicles={vehicles}
+      tenantSlug="aiaura"
+    />
   );
 }
 

@@ -174,8 +174,9 @@ function KanbanColumn({
           </div>
         ) : (
           leads.map((lead) => {
-            const vehicle = vehiclesById.get(lead.vehicleInterestIds[0]);
-            const chat = chatsById.get(lead.chatId);
+            const vehicleId = lead.vehicleInterestIds?.[0];
+            const vehicle = vehicleId ? vehiclesById.get(vehicleId) : undefined;
+            const chat = lead.chatId ? chatsById.get(lead.chatId) : undefined;
             return (
               <KanbanCard
                 key={lead.id}
@@ -183,7 +184,7 @@ function KanbanColumn({
                 vehicleLabel={
                   vehicle 
                     ? `${vehicle.make} ${vehicle.model}` 
-                    : lead.vehicleInterestIds[0]
+                    : vehicleId ?? "Unknown Vehicle"
                 }
                 chatMessageCount={chat?.messages.length}
                 onOpen={onOpen}
