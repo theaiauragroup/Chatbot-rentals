@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Plus, X, Car, UploadCloud, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { useToast } from "@/components/ui/Toaster";
 
 
 
@@ -21,6 +21,7 @@ export function PhotoPicker({
 }: PhotoPickerProps) {
   const cap = photos.length >= max;
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { success, danger, info } = useToast();
 
   function handleAddClick() {
     if (cap) return;
@@ -34,7 +35,7 @@ export function PhotoPicker({
     const availableSlots = max - photos.length;
     const filesToProcess = Array.from(files).slice(0, availableSlots);
 
-    const uploadToast = toast.loading("Uploading photos...");
+    info(`Uploading ${filesToProcess.length} photo(s)...`);
     const promises = filesToProcess.map(async (file) => {
       try {
         const formData = new FormData();
@@ -57,11 +58,11 @@ export function PhotoPicker({
     Promise.all(promises)
       .then((urls) => {
         onChange([...photos, ...urls]);
-        toast.success(`Successfully uploaded ${urls.length} photo(s)`, { id: uploadToast });
+        success(`Successfully uploaded ${urls.length} photo(s)`);
       })
       .catch((err) => {
         console.error("Error uploading files:", err);
-        toast.error("Failed to upload photos. Please try again.", { id: uploadToast });
+        danger("Failed to upload photos. Please try again.");
       });
 
     if (fileInputRef.current) {
