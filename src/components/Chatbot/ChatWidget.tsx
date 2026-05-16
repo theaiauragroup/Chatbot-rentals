@@ -424,23 +424,43 @@ export default function ChatWidget({
         .split('\n')
         .map((line: string) => {
           const trimmed = line.trim();
-          // If the line is JUST a closing bracket or artifact, kill it
           if (trimmed === ')' || trimmed === ']]' || trimmed === ']' || trimmed === '))') return '';
           return line;
         })
         .join('\n')
         .replace(/\n\s*\)\s*(?=\*\*|\w)/g, '\n')
-        // Ensure a blank line before every ordered list item so react-markdown parses them correctly
-        .replace(/(\n)([ \t]*\d+\.[ \t]+)/g, '\n\n$2')
+        // Guarantee a blank line before every ordered list item (1. / 2. / etc)
+        // so react-markdown always recognises them as <ol> items.
+        .replace(/([^\n])(\n[ \t]*\d+\.[ \t]+)/g, '$1\n\n$2')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 
-      const extractedUrls = extractImageUrls(sanitizedReply);
+      // ── Frontend numbering injection ──────────────────────────────────────
+      // The webhook sends plain text blocks starting with "Model:".
+      // Detect each one and prepend 1. / 2. / 3. so the user always sees numbering.
+      let numbered = sanitizedReply;
+      if (/Model\s*:/i.test(sanitizedReply)) {
+        // Case 1: plain "Model:" format (what we see in the screenshot)
+        let n = 1;
+        numbered = sanitizedReply.replace(
+          /(^|\n\n?)([ \t]*Model\s*:)/gi,
+          (_m: string, sep: string, label: string) => `${sep}${n++}.\n${label}`
+        );
+      } else if (/\*\*[^*\n]{4,55}\*\*/.test(sanitizedReply)) {
+        // Case 2: bold markdown titles — fallback
+        let n = 1;
+        numbered = sanitizedReply.replace(
+          /^([ \t]*)(?:\d+\.\s+)?\*\*([^*\n]{4,55})\*\*/gm,
+          (_m: string, indent: string, title: string) => `${indent}${n++}. **${title}**`
+        );
+      }
+
+      const extractedUrls = extractImageUrls(numbered);
 
       setMessages(prev => [...prev, {
         id: `msg_${Date.now()}_bot`,
         role: 'assistant',
-        content: sanitizedReply,
+        content: numbered,
         type: 'text',
         imageUrls: extractedUrls,
         timestamp: new Date()
@@ -578,51 +598,39 @@ export default function ChatWidget({
         .cw-md a { color: #2563EB; text-decoration: underline; text-underline-offset: 2px; }
         .cw-md strong { font-weight: 600; }
         
-        /* ══ ORDERED LIST: numbered vehicle cards ══ */
+        /* ORDERED LIST */
         .cw-ol {
           list-style: none !important;
           padding: 0 !important;
           margin: 0.75em 0 !important;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
+          display: block !important;
           counter-reset: vehicle-counter;
         }
 
-        /* ══ Each vehicle card ══ */
+        /* Each vehicle entry */
         .cw-vehicle-li {
           counter-increment: vehicle-counter;
           list-style: none !important;
           display: block !important;
-          background: #F8F9FA;
-          border: 1px solid rgba(0,0,0,0.09);
-          border-radius: 12px;
-          padding: 12px 14px 12px 14px;
-          position: relative;
+          margin-bottom: 14px;
         }
+        .cw-vehicle-li:last-child { margin-bottom: 0; }
 
-        /* ══ Blue circle number badge — always 1 / 2 / 3 ══ */
+        /* Simple plain bold number: 1, 2, 3 */
         .cw-vehicle-li::before {
-          content: counter(vehicle-counter);
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 22px;
-          height: 22px;
-          border-radius: 50%;
-          background: #2563EB;
-          color: #fff;
-          font-size: 11px;
+          content: counter(vehicle-counter) ".";
+          display: block;
+          font-size: 15px;
           font-weight: 700;
-          margin-bottom: 8px;
-          flex-shrink: 0;
+          color: #111;
+          margin-bottom: 6px;
         }
 
-        /* ══ Nested bullet list (price / feature lines) ══ */
+        /* Nested bullet list (price / feature / image lines) */
         .cw-vehicle-li .cw-ul {
           list-style: none !important;
-          padding: 0 !important;
-          margin: 4px 0 0 0 !important;
+          padding: 0 0 0 4px !important;
+          margin: 0 !important;
         }
         .cw-vehicle-li .cw-ul > .cw-li {
           display: flex !important;
@@ -635,18 +643,18 @@ export default function ChatWidget({
           font-size: 13px;
           color: #374151;
         }
-        /* Add a manual blue bullet dot before each text line */
+        /* Simple dash before text lines */
         .cw-vehicle-li .cw-ul > .cw-li:not(:has(.cw-image-wrapper))::before {
-          content: '•';
-          color: #2563EB;
-          font-size: 14px;
-          line-height: 1.4;
+          content: '–';
+          color: #555;
+          font-size: 13px;
+          line-height: 1.5;
           flex-shrink: 0;
         }
-        /* Image li: no bullet, no padding, full width */
+        /* Image li: no bullet, full width */
         .cw-vehicle-li .cw-ul > .cw-li:has(.cw-image-wrapper) {
           display: block !important;
-          padding: 8px 0 0 0 !important;
+          padding: 6px 0 0 0 !important;
         }
         .cw-vehicle-li .cw-ul > .cw-li:has(.cw-image-wrapper)::before {
           display: none !important;
