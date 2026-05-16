@@ -89,6 +89,15 @@ const MessageItem = memo(({ message, isGrouped }: { message: Message; isGrouped:
       <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-800 transition-colors">
         {children}
       </a>
+    ),
+    ol: ({ children, ...props }: any) => (
+      <ol className="cw-ol flex flex-col gap-4 my-3" {...props}>{children}</ol>
+    ),
+    ul: ({ children, ...props }: any) => (
+      <ul className="cw-ul flex flex-col gap-1.5 my-2" {...props}>{children}</ul>
+    ),
+    li: ({ children, ...props }: any) => (
+      <li className="cw-li" {...props}>{children}</li>
     )
   }), [message.id]);
 
@@ -421,17 +430,25 @@ export default function ChatWidget({
         })
         .join('\n')
         .replace(/\n\s*\)\s*(?=\*\*|\w)/g, '\n')
-        // Enforce newline before ordered list items to guarantee ReactMarkdown parses them
-        .replace(/(^|\n)(?!\n)(\s*\d+\.\s+)/g, '\n\n$2')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 
-      const extractedUrls = extractImageUrls(sanitizedReply);
+      // Ultimate auto-numbering failsafe: Guarantees car titles are sequentially numbered
+      let autoCounter = 1;
+      const finalReply = sanitizedReply.replace(/(^|\n+)(?:\d+\.\s+)?\*\*(.*?)\*\*(?=\s*(\n|$))/g, (match, prefix, content) => {
+        const txt = content.trim();
+        if (txt.length >= 5 && txt.length <= 60 && !txt.includes(':') && !txt.includes('?')) {
+          return `${prefix}${autoCounter++}. **${txt}**`;
+        }
+        return match;
+      });
+
+      const extractedUrls = extractImageUrls(finalReply);
 
       setMessages(prev => [...prev, {
         id: `msg_${Date.now()}_bot`,
         role: 'assistant',
-        content: sanitizedReply,
+        content: finalReply,
         type: 'text',
         imageUrls: extractedUrls,
         timestamp: new Date()
@@ -568,14 +585,15 @@ export default function ChatWidget({
         .cw-md p:last-child { margin-bottom: 0; }
         .cw-md a { color: #2563EB; text-decoration: underline; text-underline-offset: 2px; }
         .cw-md strong { font-weight: 600; }
-        .cw-md ul { list-style-type: disc !important; list-style-position: outside !important; margin: 0.5em 0 !important; padding-left: 1.5em !important; display: block !important; }
-        .cw-md ol { list-style-type: none !important; margin: 0.5em 0 !important; padding-left: 0 !important; display: block !important; counter-reset: cw-ol-counter; }
-        .cw-md li { margin-bottom: 0.25em; display: list-item !important; }
-        .cw-md ol > li { display: block !important; position: relative; padding-left: 1.5em; counter-increment: cw-ol-counter; }
-        .cw-md ol > li::before { content: counter(cw-ol-counter) ". "; position: absolute; left: 0; top: 0; font-weight: 500; }
-        .cw-md li:has(.cw-image-wrapper) { list-style-type: none !important; margin-left: -1.5em; }
-        .cw-md ol > li:has(.cw-image-wrapper)::before { content: none !important; }
-        .cw-md li > ul, .cw-md li > ol { margin: 0.25em 0 0.25em 0 !important; }
+        
+        /* List Styling */
+        .cw-ol { list-style-type: decimal !important; list-style-position: inside !important; margin-left: 0.5em !important; }
+        .cw-ol > .cw-li::marker { font-weight: 600; font-size: 14px; }
+        .cw-ul { list-style-type: disc !important; list-style-position: outside !important; margin-left: 1.5em !important; }
+        .cw-ul > .cw-li::marker { font-size: 12px; color: rgba(0,0,0,0.6); }
+        .cw-li { margin-bottom: 0.25em; display: list-item !important; }
+        .cw-li:has(.cw-image-wrapper) { list-style-type: none !important; margin-left: -1.5em; }
+
         .cw-md code {
           background: rgba(0,0,0,0.06);
           padding: 0.1em 0.3em;
