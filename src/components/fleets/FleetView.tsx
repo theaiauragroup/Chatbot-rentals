@@ -9,6 +9,7 @@ import {
   Plus,
   Upload,
   Car,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -34,6 +35,7 @@ import type {
   VehicleStatus,
 } from "@/lib/types";
 import { formatUsd, cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { toasts } from "@/lib/toasts";
 import { useToast } from "@/components/ui/Toaster";
 
@@ -78,6 +80,106 @@ export function FleetView() {
   const tableDir = (params.get("tdir") as SortDir) ?? "desc";
 
   const [csvOpen, setCsvOpen] = React.useState(false);
+
+  const [isFetching, setIsFetching] = React.useState(store.vehicles.length === 0);
+  const [fetchError, setFetchError] = React.useState<string | null>(null);
+
+  // Fetch vehicles from webhook on mount
+  React.useEffect(() => {
+    async function fetchVehicles(isSilent = false) {
+      if (!isSilent) setIsFetching(true);
+      setFetchError(null);
+      try {
+        const response = await fetch("/api/fleets");
+        if (!response.ok) throw new Error(`Failed to fetch vehicles: ${response.status}`);
+        
+        const data = await response.json();
+        console.log("Raw fleet data from webhook:", data);
+        
+        // Find the array of vehicles anywhere in the response
+        let rawVehicles: any[] = [];
+        if (Array.isArray(data)) {
+          rawVehicles = data;
+        } else if (data && typeof data === 'object') {
+          // Check common keys first
+          const possible = data.rows || data.vehicles || data.fleet || data.data || data.items || data.inventory;
+          if (Array.isArray(possible)) {
+            rawVehicles = possible;
+          } else {
+            // Aggressive search: find the first property that is an array
+            const firstArrayKey = Object.keys(data).find(k => Array.isArray(data[k]));
+            if (firstArrayKey) {
+              rawVehicles = data[firstArrayKey];
+            } else if (Object.keys(data).length > 5) {
+              // Maybe the object itself is a single vehicle
+              rawVehicles = [data];
+            }
+          }
+        }
+        
+        const mappedVehicles: Vehicle[] = rawVehicles.map((item: any) => mapWebhookVehicle(item));
+        
+        if (mappedVehicles.length > 0) {
+          store.setVehicles(mappedVehicles);
+        } else {
+          console.warn("No vehicles found or mapping failed.", { rawCount: rawVehicles.length });
+        }
+      } catch (err: any) {
+        console.error("Vehicles fetch error:", err);
+        if (!isSilent || store.vehicles.length === 0) {
+          setFetchError(err.message || "An error occurred while fetching vehicles.");
+        }
+      } finally {
+        setIsFetching(false);
+      }
+    }
+
+    fetchVehicles();
+    const interval = setInterval(() => fetchVehicles(true), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  function mapWebhookVehicle(raw: any): Vehicle {
+    const normalized: any = {};
+    Object.keys(raw).forEach(k => normalized[k.trim()] = raw[k]);
+
+    const find = (...keys: string[]) => {
+      const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const slugifiedTargets = keys.map(slugify);
+      
+      for (const rawK in normalized) {
+        const slugifiedRawK = slugify(rawK);
+        if (slugifiedTargets.includes(slugifiedRawK)) {
+          const val = normalized[rawK];
+          if (val !== undefined && val !== null && String(val).trim() !== "") return val;
+        }
+      }
+      return undefined;
+    };
+
+    const statusRaw = String(find("Available", "Status", "Is Available") || "available").toLowerCase();
+    const isAvailable = statusRaw === "yes" || statusRaw === "true" || statusRaw === "available" || statusRaw === "1";
+    const status: VehicleStatus = isAvailable ? "available" : "rented";
+
+    return {
+      id: String(find("Car ID", "Vehicle ID", "id", "ID") || `veh_${Math.random().toString(36).substr(2, 9)}`),
+      make: String(find("Make", "Brand", "Manufacturer") || "Unknown"),
+      model: String(find("Model", "Name") || "Vehicle"),
+      year: Number(find("Year", "Model Year") || 2024),
+      plate: String(find("Plate", "License Plate", "License", "Registration") || "N/A"),
+      category: (String(find("Category", "Type", "Class") || "economy").toLowerCase() as VehicleCategory),
+      dailyRateUsd: Number(String(find("Daily Rate (USD)", "Daily Rate", "Rate", "Price", "Cost") || "0").replace(/[^0-9.]/g, '')),
+      seats: Number(find("Seats", "Capacity", "Passengers") || 5),
+      transmission: (String(find("Transmission", "Gearbox") || "automatic").toLowerCase() as any),
+      fuel: (String(find("Fuel Type", "Fuel") || "gasoline").toLowerCase() as any),
+      mileageKm: Number(String(find("Mileage Limit (per day)", "Mileage", "Limit", "KM") || "0").replace(/[^0-9.]/g, '')),
+      photos: String(find("Image URL", "Photos", "Images", "Picture") || "").split(",").map(s => s.trim()).filter(Boolean),
+      features: String(find("Features", "Options", "Equipment") || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean) as any,
+      status,
+      blocks: [],
+      createdAt: String(find("Created At", "Date", "Added") || new Date().toISOString()),
+    };
+  }
 
   function setParam(updates: Record<string, string | null>) {
     const next = new URLSearchParams(params.toString());
@@ -245,9 +347,9 @@ export function FleetView() {
             Fleet
           </h2>
           <p className="text-xs text-fg-muted mt-0.5">
-            {store.vehicles.length} vehicles · {counts.available} available ·{" "}
-            {counts.rented} rented · {counts.maintenance} maintenance ·{" "}
-            {counts.retired} retired
+            {isFetching && store.vehicles.length === 0 
+              ? "Searching for vehicles..." 
+              : `${store.vehicles.length} vehicles · ${counts.available} available · ${counts.rented} rented · ${counts.maintenance} maintenance · ${counts.retired} retired`}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -328,7 +430,13 @@ export function FleetView() {
       </div>
 
       {/* Body */}
-      {view === "grid" ? (
+      {isFetching && store.vehicles.length === 0 ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+          {[...Array(8)].map((_, i) => (
+            <Skeleton key={i} className="h-[280px] w-full rounded-xl" />
+          ))}
+        </div>
+      ) : view === "grid" ? (
         gridSorted.length === 0 ? (
           <Card className="py-8">
             <EmptyState
@@ -385,6 +493,13 @@ export function FleetView() {
         </Card>
       )}
 
+      {/* Progress Bar for Background Refresh */}
+      {isFetching && store.vehicles.length > 0 && (
+        <div className="fixed top-0 left-0 right-0 h-[2px] z-[100] pointer-events-none opacity-60">
+          <div className="h-full bg-accent w-full animate-progress-sliding" />
+        </div>
+      )}
+
       {total > 0 && (
         <Pagination
           page={safePage}
@@ -395,6 +510,20 @@ export function FleetView() {
       )}
 
       <CsvImportModal open={csvOpen} onClose={() => setCsvOpen(false)} />
+
+      {/* Error notification */}
+      {fetchError && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white text-red-500 px-5 py-3 rounded-2xl text-[13px] font-semibold border border-red-100 shadow-[0_10px_40px_rgba(239,68,68,0.12)] z-50 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="size-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
+          <span className="opacity-90">{fetchError}</span>
+          <button 
+            onClick={() => setFetchError(null)} 
+            className="ml-2 size-6 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors"
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

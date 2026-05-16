@@ -16,7 +16,8 @@ type Action =
   | { type: "remove_block"; vehicleId: ID; blockId: ID }
   | { type: "reorder_photos"; id: ID; photos: string[] }
   | { type: "remove_photo"; id: ID; index: number }
-  | { type: "add_photo"; id: ID; src: string };
+  | { type: "add_photo"; id: ID; src: string }
+  | { type: "set_vehicles"; vehicles: Vehicle[] };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -96,6 +97,8 @@ function reducer(state: State, action: Action): State {
             : v
         ),
       };
+    case "set_vehicles":
+      return { ...state, vehicles: action.vehicles };
   }
 }
 
@@ -109,6 +112,7 @@ interface ContextValue extends State {
   reorderPhotos: (id: ID, photos: string[]) => void;
   removePhoto: (id: ID, index: number) => void;
   addPhoto: (id: ID, src: string) => void;
+  setVehicles: (vehicles: Vehicle[]) => void;
 }
 
 const Ctx = React.createContext<ContextValue | null>(null);
@@ -139,6 +143,7 @@ export function FleetProvider({
         dispatch({ type: "reorder_photos", id, photos }),
       removePhoto: (id, index) => dispatch({ type: "remove_photo", id, index }),
       addPhoto: (id, src) => dispatch({ type: "add_photo", id, src }),
+      setVehicles: (vehicles) => dispatch({ type: "set_vehicles", vehicles }),
     }),
     [state]
   );

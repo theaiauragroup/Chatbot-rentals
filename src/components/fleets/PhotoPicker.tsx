@@ -33,27 +33,31 @@ export function PhotoPicker({
     const availableSlots = max - photos.length;
     const filesToProcess = Array.from(files).slice(0, availableSlots);
 
-    const promises = filesToProcess.map((file) => {
-      return new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          if (e.target?.result) {
-            resolve(e.target.result as string);
-          } else {
-            reject(new Error("Failed to read file"));
-          }
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+    const promises = filesToProcess.map(async (file) => {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        
+        if (!response.ok) throw new Error("Upload failed");
+        const data = await response.json();
+        return data.url as string;
+      } catch (err) {
+        console.error("Upload error:", err);
+        throw err;
+      }
     });
 
     Promise.all(promises)
-      .then((dataUrls) => {
-        onChange([...photos, ...dataUrls]);
+      .then((urls) => {
+        onChange([...photos, ...urls]);
       })
       .catch((err) => {
-        console.error("Error reading files:", err);
+        console.error("Error uploading files:", err);
       });
 
     if (fileInputRef.current) {

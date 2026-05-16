@@ -110,13 +110,25 @@ export function VehicleForm({ initial, editingId }: VehicleFormProps) {
     const vehicleId = editingId || generateVehicleId();
 
     try {
-      await fetch("https://n8n.srv1147675.hstgr.cloud/webhook/fleetdata", {
+      await fetch("/api/fleets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: isUpdate ? "update" : "create",
-          vehicleId,
-          ...data,
+          "Car ID": vehicleId,
+          "Make": data.make,
+          "Model": data.model,
+          "Year": data.year,
+          "Category": data.category,
+          "Daily Rate (USD)": data.dailyRateUsd,
+          "Seats": data.seats,
+          "Transmission": data.transmission,
+          "Fuel Type": data.fuel,
+          "Mileage Limit (per day)": data.mileageKm,
+          "Features": data.features.join(", "),
+          "Image URL": data.photos[0] ? (data.photos[0].startsWith("http") ? data.photos[0] : window.location.origin + data.photos[0]) : "",
+          "Available": data.status === "available" ? "Yes" : "No",
+          ...data, // Keep raw data as fallback
         }),
       });
     } catch (error) {
