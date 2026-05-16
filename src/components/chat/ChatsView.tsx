@@ -4,6 +4,8 @@ import * as React from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { SearchInput } from "@/components/data/SearchInput";
 import { FilterMultiSelect } from "@/components/data/FilterMultiSelect";
 import { ChatsTable } from "./ChatsTable";
