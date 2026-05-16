@@ -421,6 +421,8 @@ export default function ChatWidget({
         })
         .join('\n')
         .replace(/\n\s*\)\s*(?=\*\*|\w)/g, '\n')
+        // Enforce newline before ordered list items to guarantee ReactMarkdown parses them
+        .replace(/(^|\n)(?!\n)(\s*\d+\.\s+)/g, '\n\n$2')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 
@@ -566,11 +568,14 @@ export default function ChatWidget({
         .cw-md p:last-child { margin-bottom: 0; }
         .cw-md a { color: #2563EB; text-decoration: underline; text-underline-offset: 2px; }
         .cw-md strong { font-weight: 600; }
-        .cw-md ul { list-style-type: disc !important; list-style-position: outside !important; margin: 0.5em 0 0.5em 1.5em !important; display: block !important; }
-        .cw-md ol { list-style-type: decimal !important; list-style-position: outside !important; margin: 0.5em 0 0.5em 1.5em !important; display: block !important; }
+        .cw-md ul { list-style-type: disc !important; list-style-position: outside !important; margin: 0.5em 0 !important; padding-left: 1.5em !important; display: block !important; }
+        .cw-md ol { list-style-type: none !important; margin: 0.5em 0 !important; padding-left: 0 !important; display: block !important; counter-reset: cw-ol-counter; }
         .cw-md li { margin-bottom: 0.25em; display: list-item !important; }
-        .cw-md li:has(.cw-image-wrapper) { list-style-type: none !important; margin-left: -1.2em; }
-        .cw-md li > ul, .cw-md li > ol { margin: 0.25em 0 0.25em 1.2em !important; }
+        .cw-md ol > li { display: block !important; position: relative; padding-left: 1.5em; counter-increment: cw-ol-counter; }
+        .cw-md ol > li::before { content: counter(cw-ol-counter) ". "; position: absolute; left: 0; top: 0; font-weight: 500; }
+        .cw-md li:has(.cw-image-wrapper) { list-style-type: none !important; margin-left: -1.5em; }
+        .cw-md ol > li:has(.cw-image-wrapper)::before { content: none !important; }
+        .cw-md li > ul, .cw-md li > ol { margin: 0.25em 0 0.25em 0 !important; }
         .cw-md code {
           background: rgba(0,0,0,0.06);
           padding: 0.1em 0.3em;
