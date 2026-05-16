@@ -138,7 +138,9 @@ function ChatsViewInner(props: ChatsViewProps) {
       return undefined;
     };
 
-    const id = String(find("Lead ID", "Session ID", "id", "session_id") || `chat_${index}_${Date.now()}`);
+    let rawId = String(find("Lead ID", "Session ID", "id", "session_id") || `chat_${index}_${Date.now()}`);
+    // Clean up #unfiltered- or session- prefixes from old data
+    const id = rawId.replace(/^#?unfiltered-/, "").replace(/^session-/, "");
     const temp = (find("Status (Hot/Warm/Cold)", "Status", "Temperature", "finalTemperature") || "cold").toLowerCase();
     const leadId = find("Lead ID", "lead_id") || (id.startsWith("lead_") || id.length > 10 ? id : undefined);
 
@@ -289,10 +291,8 @@ function ChatsViewInner(props: ChatsViewProps) {
         leadOutcomeByLeadId={leadOutcomeByLeadId}
         leadsById={leadsById}
         vehiclesById={vehiclesById}
-        onOpenLead={(leadId) => setParam({ id: leadId })}
+        onOpenLead={(chatId) => router.push(`/chats/${chatId}`)}
       />
-
-      <LeadDrawer leadId={id} onClose={() => setParam({ id: null })} />
 
       {/* Initial Loading State — only shown when no data exists */}
       {isInitialLoading && chats.length === 0 && (

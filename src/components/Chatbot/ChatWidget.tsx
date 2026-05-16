@@ -258,7 +258,11 @@ export default function ChatWidget({
       }
 
       const savedId = localStorage.getItem('chat_session_id');
-      if (savedId) return savedId;
+      // If we have a saved ID, but it's in the old format (doesn't start with AB-), clear it to force migration
+      if (savedId && savedId.startsWith('AB-')) return savedId;
+      
+      localStorage.removeItem('chatMessages'); // Optional: clear old messages too if ID changes
+      localStorage.removeItem('chat_session_id');
 
       // Generate incrementing AB-001 format
       const currentCount = parseInt(localStorage.getItem('chat_session_counter') || '0', 10);

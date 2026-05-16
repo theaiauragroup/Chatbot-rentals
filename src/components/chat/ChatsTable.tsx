@@ -184,7 +184,7 @@ export function ChatsTable({
         columns={columns}
         rows={visible}
         rowKey={(r) => r.id}
-        onRowClick={(r) => onOpenLead(r.leadId || r.id)}
+        onRowClick={(r) => onOpenLead(r.id)}
         sortKey={sort}
         sortDir={dir}
         onSortChange={(k, d) => setParam({ sort: k, dir: d, page: null })}
