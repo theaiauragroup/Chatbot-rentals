@@ -139,9 +139,9 @@ function ChatsViewInner(props: ChatsViewProps) {
     };
 
     let rawId = String(find("Lead ID", "Session ID", "id", "session_id") || `chat_${index}_${Date.now()}`);
-    // Clean up #unfiltered- or session- prefixes from old data
-    const id = rawId.replace(/^#?unfiltered-/, "").replace(/^session-/, "");
-    const temp = (find("Status (Hot/Warm/Cold)", "Status", "Temperature", "finalTemperature") || "cold").toLowerCase();
+    // Clean up #, #unfiltered- or session- prefixes from old data
+    const id = rawId.replace(/^#?unfiltered-/, "").replace(/^session-/, "").replace(/^#/, "").trim();
+    const temp = (find("Status (Hot/Warm/Cold)", "Status", "Temperature", "finalTemperature", "Lead Status", "temp") || "cold").toLowerCase();
     const leadId = find("Lead ID", "lead_id") || (id.startsWith("lead_") || id.length > 10 ? id : undefined);
 
     return {
@@ -151,11 +151,12 @@ function ChatsViewInner(props: ChatsViewProps) {
       durationSec: Number(find("Total Days", "Duration", "duration_sec") || 0),
       customerName: find("Full Name", "Name", "Customer Name", "customer_name"),
       customerPhone: find("Phone Number", "Phone", "customer_phone", "phone"),
-      customerEmail: find("Email Address", "Email", "customer_email", "email"),
+      customerEmail: find("Email Address", "email", "customer_email", "email"),
       messages: [], 
       leadId,
       vehicleIdsOfInterest: find("Vehicle interest", "Vehicle", "Car", "Vehicle Name") ? [String(find("Vehicle interest", "Vehicle", "Car", "Vehicle Name"))] : [],
       finalTemperature: (temp.includes("hot") ? "hot" : temp.includes("warm") ? "warm" : "cold") as LeadTemperature,
+      rawStatus: find("Status (Hot/Warm/Cold)", "Status", "Temperature", "finalTemperature", "Lead Status", "temp"),
       channel: "web_widget",
       countryCode: find("Country", "country_code"),
       aiSummary: find("Chat Summary", "Summary", "ai_summary"),
@@ -252,7 +253,7 @@ function ChatsViewInner(props: ChatsViewProps) {
       <div>
         <h2 className="text-lg font-semibold text-fg leading-tight">Chat history</h2>
         <p className="text-xs text-fg-muted mt-0.5">
-          {filtered.length} conversations found
+          {isInitialLoading && chats.length === 0 ? "Searching for conversations..." : `${filtered.length} conversations found`}
         </p>
       </div>
 
@@ -285,20 +286,21 @@ function ChatsViewInner(props: ChatsViewProps) {
       </div>
 
       {/* Main Table — always visible once loaded */}
-      <ChatsTable
-        chats={filtered}
-        tenantSlug={props.tenantSlug}
-        leadOutcomeByLeadId={leadOutcomeByLeadId}
-        leadsById={leadsById}
-        vehiclesById={vehiclesById}
-        onOpenLead={(chatId) => router.push(`/chats/${chatId}`)}
-      />
-
-      {/* Initial Loading State — only shown when no data exists */}
-      {isInitialLoading && chats.length === 0 && (
-        <div className="absolute inset-0 bg-white/50 backdrop-blur-[2px] flex items-center justify-center z-10 rounded-xl">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
-        </div>
+      {isInitialLoading && chats.length === 0 ? (
+        <Card className="p-12 flex flex-col items-center justify-center gap-4">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-full" />
+        </Card>
+      ) : (
+        <ChatsTable
+          chats={filtered}
+          tenantSlug={props.tenantSlug}
+          leadOutcomeByLeadId={leadOutcomeByLeadId}
+          leadsById={leadsById}
+          vehiclesById={vehiclesById}
+          onOpenLead={(chatId) => router.push(`/chats/${chatId}`)}
+        />
       )}
 
       {fetchError && (

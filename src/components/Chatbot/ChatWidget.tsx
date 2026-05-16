@@ -315,16 +315,21 @@ export default function ChatWidget({
     );
   };
 
-  // FIXED: Extract image URLs with better error handling
+  // FIXED: Extract image URLs with better error handling - catches both ![alt](url) and [Image](url)
   const extractImageUrls = (text: string): string[] => {
     const urls: string[] = [];
-    const regex = /!\[[^\]]*\]\(([^)]+)\)/g;
+    // Catch both ![alt](url) and [alt](url) if alt contains "Image" or URL is an image/unsplash
+    const regex = /(?:!)?\[([^\]]*)\]\(([^)]+)\)/g;
     let match;
 
     while ((match = regex.exec(text)) !== null) {
-      const url = match[1].trim();
-      // Only add valid URLs
-      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+      const alt = match[1].toLowerCase();
+      const url = match[2].trim().replace(/\s+/g, '');
+      
+      const isImageAlt = alt.includes('image') || alt.includes('photo') || alt.includes('vehicle') || alt.includes('car');
+      const isImageUrl = url.includes('unsplash.com') || url.match(/\.(jpg|jpeg|png|webp|gif|svg)/i);
+
+      if (url && (url.startsWith('http://') || url.startsWith('https://')) && (isImageAlt || isImageUrl)) {
         urls.push(url);
       }
     }
@@ -381,24 +386,45 @@ export default function ChatWidget({
       const data = await response.json();
       const reply = data.reply || data.message || data.output || data.text || (typeof data === 'string' ? data : null) || 'I apologize, but I encountered an error. Please try again.';
 
-      // Pre-process: Convert raw Unsplash URLs into markdown image tags if they aren't already formatted
-      const preProcessedReply = reply.replace(/(?:!?\[.*?\]\()?https:\/\/images\.unsplash\.com\/[^\s\)]+/g, (match: string) => {
-        if (match.startsWith('[')) return match; // Already a markdown link
-        if (match.startsWith('![')) return match; // Already a markdown image
-        return `![Vehicle](${match})`;
+      // 1. Comprehensive URL and Markdown Pre-processor
+      // Catches raw URLs, markdown links, and images, and converts them to proper image tags.
+      // Now handles multiple trailing parentheses aggressively.
+      const preProcessedReply = reply.replace(/(?:!?\[([^\]]*)\]\s*\()?(\bhttps?:\/\/[^\s\)]+)(?:\s*\)+)?/gi, (match, alt, url) => {
+        const cleanUrl = url.trim().replace(/\s+/g, '');
+        const isImage = cleanUrl.includes('unsplash.com') || cleanUrl.match(/\.(jpg|jpeg|png|webp|gif)/i);
+        const altText = alt || 'Vehicle';
+        const isImageAlt = (alt || '').toLowerCase().includes('image') || (alt || '').toLowerCase().includes('photo');
+        
+        if (isImage || isImageAlt) {
+          return `![${altText}](${cleanUrl})`;
+        }
+        return match;
       });
 
-      // Super-Sanitizer: Aggressively repairs broken AI markdown tags
-      const sanitizedReply = preProcessedReply.replace(/!\[([^\]]*)\][\s\n]*\(([\s\S]*?)(?:\)|$)/g, (match: string, alt: string, url: string) => {
-        // Remove all newlines and spaces from the URL part to make it a valid markdown link
-        const cleanUrl = url.replace(/[\s\n\r\t]/g, '').trim();
-        if (!cleanUrl) return match; // If we couldn't find a URL, don't break it further
-        return `![${alt}](${cleanUrl})`;
-      });
+      // 2. Super-Sanitizer: Repairs any remaining broken markdown and NUCLEARLY removes stray artifacts
+      const sanitizedReply = preProcessedReply
+        .replace(/(?:!)?\[([^\]]*)\][\s\n]*\(([^)]+)\)(?:\s*\))*/g, (match, alt, url) => {
+          const cleanUrl = url.replace(/[\s\n\r\t]/g, '').trim();
+          if (!cleanUrl) return match;
+          const looksLikeImage = alt.toLowerCase().includes('image') || alt.toLowerCase().includes('photo') || cleanUrl.includes('unsplash.com') || cleanUrl.match(/\.(jpg|jpeg|png|webp|gif)/i);
+          return looksLikeImage ? `![${alt || 'Vehicle'}](${cleanUrl})` : match;
+        })
+        // Remove unnecessary wrapping parentheses: ( ![Image](url) ) -> ![Image](url)
+        .replace(/\(\s*(!\[[^\]]*\]\([^)]+\))\s*\)/g, '$1')
+        // Nuclear cleanup of stray brackets on their own lines or before text
+        .split('\n')
+        .map(line => {
+          const trimmed = line.trim();
+          // If the line is JUST a closing bracket or artifact, kill it
+          if (trimmed === ')' || trimmed === ']]' || trimmed === ']' || trimmed === '))') return '';
+          return line;
+        })
+        .join('\n')
+        .replace(/\n\s*\)\s*(?=\*\*|\w)/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
 
       const extractedUrls = extractImageUrls(sanitizedReply);
-
-      console.log('📸 Extracted image URLs:', extractedUrls);
 
       setMessages(prev => [...prev, {
         id: `msg_${Date.now()}_bot`,

@@ -5,6 +5,7 @@ import { Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Badge } from "@/components/ui/Badge";
 import {
   DataTable,
   sortRows,
@@ -76,7 +77,11 @@ export function LeadsTable({
         sortable: true,
         sortAccessor: (r) => r.temperature || "cold",
         width: 110,
-        render: (r) => <TemperaturePill temperature={r.temperature || "cold"} />,
+        render: (r) => (r.rawStatus || r.temperature) ? (
+          <Badge variant={r.temperature || "neutral"} withDot>
+            {r.rawStatus || r.temperature}
+          </Badge>
+        ) : null,
       },
       {
         key: "outcome",

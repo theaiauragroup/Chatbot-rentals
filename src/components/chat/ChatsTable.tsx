@@ -13,6 +13,7 @@ import {
   type ColumnDef,
   type SortDir,
 } from "@/components/data/DataTable";
+import { Badge } from "@/components/ui/Badge";
 import { SearchInput } from "@/components/data/SearchInput";
 import { FilterMultiSelect } from "@/components/data/FilterMultiSelect";
 import { Pagination } from "@/components/data/Pagination";
@@ -133,6 +134,18 @@ export function ChatsTable({
               )}
             </div>
           </div>
+        ),
+      },
+      {
+        key: "status",
+        label: "Status",
+        sortable: true,
+        sortAccessor: (r) => r.finalTemperature,
+        width: 100,
+        render: (r) => (
+          <Badge variant={r.finalTemperature || "neutral"} withDot>
+            {r.rawStatus || r.finalTemperature || "Unset"}
+          </Badge>
         ),
       },
       {

@@ -9,8 +9,8 @@ export default function ChatsPage() {
   return (
     <React.Suspense fallback={<Skeleton className="h-[600px] w-full" />}>
       <ChatsView
-        initialChats={[]}
-        initialLeads={[]}
+        initialChats={chats}
+        initialLeads={leads}
         initialVehicles={vehicles}
         tenantSlug={tenant.slug}
       />

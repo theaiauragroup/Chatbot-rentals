@@ -18,6 +18,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Badge } from "@/components/ui/Badge";
 import { TemperaturePill } from "@/components/leads/StatusPill";
 import { TranscriptView } from "@/components/chat/TranscriptView";
 import { chatById, leadById, vehicleById } from "@/lib/mock";
@@ -51,27 +52,39 @@ export default function TranscriptPage() {
         const data = await res.json();
         const rawChats = Array.isArray(data) ? data : data.chats || [];
         
-        const targetId = id.replace(/^#?unfiltered-/, "").replace(/^session-/, "");
+        const targetId = id.replace(/^#?unfiltered-/, "").replace(/^session-/, "").replace(/^#/, "").trim();
         const found = rawChats.find((c: any) => {
-          const cid = String(c["Session ID"] || c["id"] || c["session_id"] || "")
-            .replace(/^#?unfiltered-/, "")
-            .replace(/^session-/, "");
-          return cid === targetId || String(c["Lead ID"] || "") === targetId;
+          const findId = (obj: any) => {
+            const raw = String(obj["Session ID"] || obj["id"] || obj["session_id"] || obj["Lead ID"] || obj["lead_id"] || "");
+            return raw.replace(/^#?unfiltered-/, "").replace(/^session-/, "").replace(/^#/, "").trim();
+          };
+          return findId(c) === targetId;
         });
 
         if (found) {
+          const find = (obj: any, ...keys: string[]) => {
+            for (const k of keys) {
+              if (obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== "") return obj[k];
+            }
+            return undefined;
+          };
+
           setChat({
             id: targetId,
-            startedAt: found["Created At"] || found["Date"] || new Date().toISOString(),
-            lastMessageAt: found["Last Activity At"] || found["Timestamp"] || new Date().toISOString(),
-            durationSec: 0,
-            customerName: found["Full Name"] || found["Name"] || "Customer",
-            customerPhone: found["Phone Number"] || found["Phone"],
+            startedAt: find(found, "Created At", "Date", "Started At", "timestamp") || new Date().toISOString(),
+            lastMessageAt: find(found, "Last Activity At", "Timestamp", "Last Activity", "updatedAt") || new Date().toISOString(),
+            durationSec: Number(find(found, "Total Days", "Duration", "duration_sec") || 0),
+            customerName: find(found, "Full Name", "Name", "Customer Name", "customer_name") || "Customer",
+            customerPhone: find(found, "Phone Number", "Phone", "customer_phone", "phone"),
             messages: [], 
-            finalTemperature: (String(found["Status"] || found["Temperature"] || "cold").toLowerCase().includes("hot") ? "hot" : "cold") as any,
+            finalTemperature: (() => {
+              const t = String(find(found, "Status", "Temperature", "finalTemperature", "Lead Status", "temp") || "cold").toLowerCase();
+              return t.includes("hot") ? "hot" : t.includes("warm") ? "warm" : "cold";
+            })() as any,
+            rawStatus: find(found, "Status", "Temperature", "Lead Status", "temp"),
             channel: "web_widget",
-            aiSummary: found["Chat Summary"] || found["Summary"] || found["ai_summary"],
-            vehicleIdsOfInterest: found["Vehicle interest"] ? [String(found["Vehicle interest"])] : [],
+            aiSummary: find(found, "Chat Summary", "Summary", "ai_summary") || found["Chat Summary"],
+            vehicleIdsOfInterest: find(found, "Vehicle interest", "Vehicle", "Car", "Vehicle Name") ? [String(find(found, "Vehicle interest", "Vehicle", "Car", "Vehicle Name"))] : [],
           });
         }
       } catch (err) {
@@ -114,7 +127,21 @@ export default function TranscriptPage() {
 
   const lead = chat.leadId ? leadById(chat.leadId) : undefined;
   const vehicleInterest = (lead?.vehicleInterestIds ?? chat.vehicleIdsOfInterest ?? [])
-    .map((vid) => vehicleById(vid))
+    .map((vid) => {
+      const v = vehicleById(vid);
+      if (v) return v;
+      // If not a mock ID (e.g. it's a raw vehicle name from the webhook), create a virtual vehicle for display
+      if (vid && !vid.startsWith("veh_") && vid.length > 2) {
+        return {
+          id: vid,
+          make: vid,
+          model: "",
+          year: 0,
+          category: "luxury",
+        } as any;
+      }
+      return null;
+    })
     .filter(Boolean);
 
   return (
@@ -194,7 +221,6 @@ export default function TranscriptPage() {
                   )}
                 </div>
               </div>
-              <TemperaturePill temperature={chat.finalTemperature} />
             </div>
           </Card>
 
@@ -208,7 +234,7 @@ export default function TranscriptPage() {
                   <div key={v!.id} className="flex items-center gap-2 text-xs">
                     <Car className="size-3.5 text-fg-subtle" />
                     <span className="text-fg truncate">
-                      {v!.make} {v!.model} ({v!.year})
+                      {v!.make} {v!.model} {v!.year > 0 ? `(${v!.year})` : ""}
                     </span>
                   </div>
                 ))}

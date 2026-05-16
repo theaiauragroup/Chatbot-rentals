@@ -43,6 +43,7 @@ export interface Lead {
   estimatedValueUsd?: number;
   aiSummary?: string;
   managerNotes?: string;
+  rawStatus?: string;
   createdAt?: ISODateTime;
   updatedAt?: ISODateTime;
   source: "web_widget";
@@ -138,6 +139,7 @@ export interface Chat {
   countryCode?: string;
   outcome?: "in_progress" | "closed" | "handed_off";
   aiSummary?: string;
+  rawStatus?: string;
 }
 
 // ─── Notification ───────────────────────────────────────────────────────────

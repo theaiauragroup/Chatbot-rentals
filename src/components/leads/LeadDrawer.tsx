@@ -13,6 +13,7 @@ import ReactMarkdown from 'react-markdown';
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 import { Drawer } from "@/components/ui/Drawer";
 import { Modal } from "@/components/ui/Modal";
 import { Textarea } from "@/components/ui/Textarea";
@@ -166,6 +167,13 @@ function LeadDrawerBody({
               </a>
             )}
           </p>
+          <div className="mt-2">
+            {(lead.rawStatus || lead.temperature) && (
+              <Badge variant={lead.temperature || "neutral"} withDot>
+                {lead.rawStatus || lead.temperature}
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
 

@@ -166,9 +166,14 @@ function LeadsViewInner({
       customerName: nameRaw ? String(nameRaw) : undefined,
       customerPhone: phoneRaw ? String(phoneRaw) : undefined,
       customerEmail: find("Email Address", "email", "Customer Email"),
-      temperature: find("Status (Hot/Warm/Cold)", "Status", "temperature", "Lead Temperature") 
-        ? (String(find("Status (Hot/Warm/Cold)", "Status", "temperature", "Lead Temperature")).toLowerCase() as LeadTemperature)
-        : undefined,
+      temperature: (() => {
+        const t = String(find("Status (Hot/Warm/Cold)", "Status", "Temperature", "Lead Temperature", "Lead Status", "temp") || "").toLowerCase();
+        if (t.includes("hot")) return "hot";
+        if (t.includes("warm")) return "warm";
+        if (t.includes("cold")) return "cold";
+        return undefined;
+      })(),
+      rawStatus: find("Status (Hot/Warm/Cold)", "Status", "Temperature", "Lead Temperature", "Lead Status", "temp"),
       outcome: find("Outcome (Open/Booked/Lost/No-response)", "Outcome", "outcome", "Lead Outcome")
         ? (String(find("Outcome (Open/Booked/Lost/No-response)", "Outcome", "outcome", "Lead Outcome")).toLowerCase() as LeadOutcome)
         : undefined,
@@ -279,10 +284,10 @@ function LeadsViewInner({
 
   return (
     <div className="flex flex-col gap-4 relative">
-      {/* Silent Refresh Indicator (Premium Progress Bar) */}
+      {/* Background Refresh Indicator — very subtle top bar */}
       {isFetching && store.leads.length > 0 && (
-        <div className="fixed top-0 left-0 right-0 h-[3px] z-[100] pointer-events-none">
-          <div className="h-full bg-gradient-to-r from-transparent via-accent to-transparent w-full animate-progress-sliding shadow-[0_1px_10px_rgba(var(--accent-rgb),0.4)]"></div>
+        <div className="fixed top-0 left-0 right-0 h-[2px] z-[100] pointer-events-none opacity-60">
+          <div className="h-full bg-accent w-full animate-progress-sliding" />
         </div>
       )}
 
@@ -296,8 +301,7 @@ function LeadsViewInner({
             Leads
           </h2>
           <p className="text-xs text-fg-muted mt-0.5">
-            {filtered.length} active · {counts.hot} hot · {counts.warm} warm ·{" "}
-            {counts.cold} cold
+            {isFetching && store.leads.length === 0 ? "Searching for leads..." : `${filtered.length} active · ${counts.hot} hot · ${counts.warm} warm · ${counts.cold} cold`}
           </p>
         </div>
         <SegmentedControl
@@ -348,7 +352,13 @@ function LeadsViewInner({
       </div>
 
       {/* Body */}
-      {view === "kanban" ? (
+      {isFetching && store.leads.length === 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <Skeleton className="h-[400px] w-full rounded-xl" />
+          <Skeleton className="h-[400px] w-full rounded-xl" />
+          <Skeleton className="h-[400px] w-full rounded-xl" />
+        </div>
+      ) : view === "kanban" ? (
         <KanbanBoard
           leads={filtered}
           vehiclesById={vehiclesById}
@@ -371,19 +381,6 @@ function LeadsViewInner({
       )}
 
       <LeadDrawer leadId={id} onClose={() => setParam({ id: null })} />
-
-      {/* Fetching overlay */}
-      {isFetching && store.leads.length === 0 && (
-        <div className="fixed inset-0 bg-white/40 backdrop-blur-sm flex items-center justify-center z-50 transition-all duration-500">
-          <div className="bg-white/80 backdrop-blur-md p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white/20 flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-300">
-            <div className="relative">
-              <div className="size-10 border-[3px] border-accent/10 rounded-full" />
-              <div className="absolute inset-0 size-10 border-[3px] border-accent border-t-transparent rounded-full animate-spin" />
-            </div>
-            <p className="text-sm font-semibold text-accent tracking-wide uppercase">Updating Leads</p>
-          </div>
-        </div>
-      )}
 
       {/* Error notification */}
       {fetchError && (
