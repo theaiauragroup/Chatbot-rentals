@@ -4,18 +4,22 @@ import * as React from "react";
 import type { PromptSettings, PromptVersion } from "@/lib/types";
 import { saveTuneVersion } from "@/lib/api";
 
+const STORAGE_KEY = "aiaura_tune_versions";
+
 interface State {
   versions: PromptVersion[];
   draft: PromptSettings;
   /** Snapshot of the currently-published settings (versions[isCurrent].settings). */
   publishedAt: string;
+  isLoaded: boolean;
 }
 
 type Action =
+  | { type: "load_versions"; versions: PromptVersion[] }
   | { type: "patch_draft"; patch: Partial<PromptSettings> }
   | { type: "patch_rules"; patch: Partial<PromptSettings["businessRules"]> }
   | { type: "discard" }
-  | { type: "save"; summary: string; authorName: string }
+  | { type: "save"; version: PromptVersion }
   | { type: "rollback"; versionId: string };
 
 function published(versions: PromptVersion[]): PromptVersion {
@@ -24,6 +28,16 @@ function published(versions: PromptVersion[]): PromptVersion {
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
+    case "load_versions": {
+      const cur = published(action.versions);
+      return {
+        ...state,
+        versions: action.versions,
+        draft: structuredClone(cur.settings),
+        publishedAt: cur.createdAt,
+        isLoaded: true,
+      };
+    }
     case "patch_draft":
       return { ...state, draft: { ...state.draft, ...action.patch } };
     case "patch_rules":
@@ -43,24 +57,14 @@ function reducer(state: State, action: Action): State {
       };
     }
     case "save": {
-      const cur = published(state.versions);
-      const nextLabel = bumpVersion(cur.versionLabel);
-      const newVersion: PromptVersion = {
-        id: `ver_${Date.now()}`,
-        versionLabel: nextLabel,
-        createdAt: new Date().toISOString(),
-        authorName: action.authorName,
-        summary: action.summary || "Updated bot settings",
-        settings: structuredClone(state.draft),
-        isCurrent: true,
-      };
+      const nextVersions = [
+        action.version,
+        ...state.versions.map((v) => ({ ...v, isCurrent: false })),
+      ];
       return {
         ...state,
-        versions: [
-          newVersion,
-          ...state.versions.map((v) => ({ ...v, isCurrent: false })),
-        ],
-        publishedAt: newVersion.createdAt,
+        versions: nextVersions,
+        publishedAt: action.version.createdAt,
       };
     }
     case "rollback": {
@@ -107,12 +111,38 @@ export function TuneProvider({
   initialVersions: PromptVersion[];
   children: React.ReactNode;
 }) {
-  const cur = published(initialVersions);
   const [state, dispatch] = React.useReducer(reducer, {
     versions: initialVersions,
-    draft: structuredClone(cur.settings),
-    publishedAt: cur.createdAt,
+    draft: structuredClone(published(initialVersions).settings),
+    publishedAt: published(initialVersions).createdAt,
+    isLoaded: false,
   });
+
+  // Load from localStorage on mount
+  React.useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          dispatch({ type: "load_versions", versions: parsed });
+        } else {
+          dispatch({ type: "load_versions", versions: initialVersions });
+        }
+      } catch (e) {
+        dispatch({ type: "load_versions", versions: initialVersions });
+      }
+    } else {
+      dispatch({ type: "load_versions", versions: initialVersions });
+    }
+  }, [initialVersions]);
+
+  // Persist to localStorage whenever versions change
+  React.useEffect(() => {
+    if (state.isLoaded) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.versions));
+    }
+  }, [state.versions, state.isLoaded]);
 
   const current = published(state.versions);
   const isDirty = !shallowEqualSettings(state.draft, current.settings);
@@ -125,16 +155,27 @@ export function TuneProvider({
     patchRules: (p) => dispatch({ type: "patch_rules", patch: p }),
     discard: () => dispatch({ type: "discard" }),
     save: (summary, authorName) => {
-      const cur = published(state.versions);
-      const nextLabel = bumpVersion(cur.versionLabel);
-      saveTuneVersion({
+      const nextLabel = bumpVersion(current.versionLabel);
+      const newVersion: PromptVersion = {
+        id: `ver_${Date.now()}`,
         versionLabel: nextLabel,
         createdAt: new Date().toISOString(),
+        authorName,
+        summary: summary || "Updated bot settings",
+        settings: structuredClone(state.draft),
+        isCurrent: true,
+      };
+
+      // One logic: Save to webhook and local state
+      saveTuneVersion({
+        versionLabel: nextLabel,
+        createdAt: newVersion.createdAt,
         authorName,
         settings: state.draft,
         isRollback: false
       });
-      dispatch({ type: "save", summary, authorName });
+
+      dispatch({ type: "save", version: newVersion });
     },
     rollback: (versionId) => {
       const target = state.versions.find((v) => v.id === versionId);
@@ -178,3 +219,4 @@ function shallowEqualSettings(a: PromptSettings, b: PromptSettings): boolean {
     a.escalationTriggers.every((t, i) => t === b.escalationTriggers[i])
   );
 }
+

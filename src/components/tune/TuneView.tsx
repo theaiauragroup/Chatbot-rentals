@@ -40,6 +40,11 @@ function TuneViewInner() {
   const params = useSearchParams();
   const store = useTuneStore();
 
+  // Wait for persistence to load from localStorage
+  if (!store.isLoaded) {
+    return <div className="h-[600px] w-full bg-surface animate-pulse rounded-lg border border-border" />;
+  }
+
   const tabParam = params.get("tab") as TabValue | null;
   const tab = VALID_TABS.includes(tabParam as TabValue)
     ? (tabParam as TabValue)
