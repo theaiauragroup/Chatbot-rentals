@@ -81,6 +81,11 @@ function LeadsViewInner({
   const store = useLeadsStore();
   const [isFetching, setIsFetching] = React.useState(store.leads.length === 0);
   const [fetchError, setFetchError] = React.useState<string | null>(null);
+  const [hasHydrated, setHasHydrated] = React.useState(false);
+
+  React.useEffect(() => {
+    setHasHydrated(true);
+  }, []);
 
   // Fetch leads from webhook on mount
   React.useEffect(() => {
@@ -360,12 +365,20 @@ function LeadsViewInner({
           <Skeleton className="h-[400px] w-full rounded-xl" />
         </div>
       ) : view === "kanban" ? (
-        <KanbanBoard
-          leads={filtered}
-          vehiclesById={vehiclesById}
-          chatsById={chatsById}
-          onOpen={(l) => setParam({ id: l.id })}
-        />
+        hasHydrated ? (
+          <KanbanBoard
+            leads={filtered}
+            vehiclesById={vehiclesById}
+            chatsById={chatsById}
+            onOpen={(l) => setParam({ id: l.id })}
+          />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Skeleton className="h-[400px] w-full rounded-xl" />
+            <Skeleton className="h-[400px] w-full rounded-xl" />
+            <Skeleton className="h-[400px] w-full rounded-xl" />
+          </div>
+        )
       ) : (
         <LeadsTable
           leads={filtered}
