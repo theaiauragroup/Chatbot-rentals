@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { writeFile } from "fs/promises";
+import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
@@ -16,8 +17,11 @@ export async function POST(request: Request) {
     // Create a unique filename
     const ext = path.extname(file.name) || ".jpg";
     const filename = `${crypto.randomUUID()}${ext}`;
-    const uploadPath = path.join(process.cwd(), "public", "uploads", filename);
+    const uploadDir = path.join(process.cwd(), "public", "uploads");
+    const uploadPath = path.join(uploadDir, filename);
 
+    // Ensure directory exists
+    await mkdir(uploadDir, { recursive: true });
     await writeFile(uploadPath, buffer);
 
     // Return the clean local URL
