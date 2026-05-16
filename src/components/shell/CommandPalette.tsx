@@ -32,7 +32,6 @@ const PAGES: PaletteItem[] = [
   { id: "p_dashboard", group: "Pages", label: "Dashboard", href: "/dashboard", icon: <Sparkles className="size-3.5" aria-hidden /> },
   { id: "p_chats", group: "Pages", label: "Chat history", href: "/chats", icon: <MessageCircle className="size-3.5" aria-hidden /> },
   { id: "p_leads", group: "Pages", label: "Leads", href: "/leads", icon: <Sparkles className="size-3.5" aria-hidden /> },
-  { id: "p_tune", group: "Pages", label: "Tune AI", href: "/tune", icon: <Sparkles className="size-3.5" aria-hidden /> },
   { id: "p_fleets", group: "Pages", label: "Fleet", href: "/fleets", icon: <Car className="size-3.5" aria-hidden /> },
   { id: "p_settings", group: "Pages", label: "Settings", href: "/settings", icon: <Sparkles className="size-3.5" aria-hidden /> },
 ];

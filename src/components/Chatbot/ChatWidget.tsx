@@ -566,7 +566,10 @@ export default function ChatWidget({
         .cw-md p:last-child { margin-bottom: 0; }
         .cw-md a { color: #2563EB; text-decoration: underline; text-underline-offset: 2px; }
         .cw-md strong { font-weight: 600; }
-        .cw-md ul, .cw-md ol { margin: 0.4em 0; padding-left: 1.1em; }
+        .cw-md ul { list-style-type: disc !important; list-style-position: outside !important; margin: 0.5em 0 0.5em 1.5em !important; display: block !important; }
+        .cw-md ol { list-style-type: decimal !important; list-style-position: outside !important; margin: 0.5em 0 0.5em 1.5em !important; display: block !important; }
+        .cw-md li { margin-bottom: 0.25em; display: list-item !important; }
+        .cw-md li > ul, .cw-md li > ol { margin: 0.25em 0 0.25em 1.2em !important; }
         .cw-md code {
           background: rgba(0,0,0,0.06);
           padding: 0.1em 0.3em;

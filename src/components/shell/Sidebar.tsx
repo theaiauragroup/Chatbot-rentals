@@ -29,9 +29,8 @@ const NAV: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="size-4" />, shortcut: "1", group: "main" },
   { label: "Chats", href: "/chats", icon: <MessageSquare className="size-4" />, shortcut: "2", group: "main" },
   { label: "Leads", href: "/leads", icon: <Sparkles className="size-4" />, shortcut: "3", group: "main" },
-  { label: "Tune AI", href: "/tune", icon: <Wand2 className="size-4" />, shortcut: "4", group: "configure" },
-  { label: "Fleets", href: "/fleets", icon: <Car className="size-4" />, shortcut: "5", group: "configure" },
-  { label: "Settings", href: "/settings", icon: <Settings className="size-4" />, shortcut: "6", group: "configure" },
+  { label: "Fleets", href: "/fleets", icon: <Car className="size-4" />, shortcut: "4", group: "configure" },
+  { label: "Settings", href: "/settings", icon: <Settings className="size-4" />, shortcut: "5", group: "configure" },
 ];
 
 function isActive(pathname: string, href: string) {

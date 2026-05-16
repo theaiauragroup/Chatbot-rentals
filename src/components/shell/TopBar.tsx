@@ -13,7 +13,6 @@ const TITLE_MAP: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/chats": "Chat history",
   "/leads": "Leads",
-  "/tune": "Tune AI",
   "/fleets": "Fleet",
   "/fleets/new": "Add vehicle",
   "/settings": "Settings",
@@ -25,7 +24,6 @@ function titleFor(pathname: string) {
   if (pathname.startsWith("/fleets/new")) return "Add vehicle";
   if (pathname.startsWith("/fleets/")) return "Vehicle";
   if (pathname.startsWith("/leads")) return "Leads";
-  if (pathname.startsWith("/tune")) return "Tune AI";
   if (pathname.startsWith("/settings")) return "Settings";
   return "Dashboard";
 }
