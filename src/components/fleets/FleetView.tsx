@@ -10,6 +10,8 @@ import {
   Upload,
   Car,
   X,
+  FileCheck,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -535,7 +537,10 @@ function CsvImportModal({
   open: boolean;
   onClose: () => void;
 }) {
-  const toast = useToast();
+  const { success, danger, info } = useToast();
+  const [file, setFile] = React.useState<File | null>(null);
+  const [isUploading, setIsUploading] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   function downloadTemplate() {
     const header =
@@ -555,33 +560,104 @@ function CsvImportModal({
     URL.revokeObjectURL(url);
   }
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (selected) {
+      if (selected.name.toLowerCase().endsWith('.csv')) {
+        setFile(selected);
+      } else {
+        danger("Please select a valid CSV file.");
+      }
+    }
+  };
+
+  const handleImport = async () => {
+    if (!file) return;
+    setIsUploading(true);
+    info(`Parsing ${file.name}...`);
+
+    try {
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter(line => line.trim() !== "");
+      if (lines.length < 2) throw new Error("CSV file is empty or missing data.");
+
+      const parseCSVLine = (line: string) => {
+        const result = [];
+        let cur = "";
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') inQuotes = !inQuotes;
+          else if (char === ',' && !inQuotes) {
+            result.push(cur.trim());
+            cur = "";
+          } else cur += char;
+        }
+        result.push(cur.trim());
+        return result;
+      };
+
+      const headers = parseCSVLine(lines[0]);
+      const rows = lines.slice(1).map(line => {
+        const values = parseCSVLine(line);
+        const obj: any = {};
+        headers.forEach((header, i) => {
+          if (header) obj[header] = values[i] || "";
+        });
+        return obj;
+      });
+
+      info(`Importing ${rows.length} rows...`);
+      
+      let successCount = 0;
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        try {
+          const response = await fetch("https://n8n.srv1147675.hstgr.cloud/webhook/fleet_csv", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(row),
+          });
+          if (response.ok) successCount++;
+        } catch (e) {
+          console.error(`Failed to import row ${i}:`, e);
+        }
+      }
+
+      success(`Successfully imported ${successCount} of ${rows.length} vehicles!`);
+      setFile(null);
+      onClose();
+    } catch (err: any) {
+      console.error("CSV Import error:", err);
+      danger(`Import Failed: ${err.message}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <Modal
       open={open}
       onOpenChange={(o) => {
-        if (!o) onClose();
+        if (!o && !isUploading) {
+          setFile(null);
+          onClose();
+        }
       }}
       title="Import vehicles from CSV"
-      description="Upload a CSV with the columns from our template. We'll preview the parsed rows before importing."
+      description="Upload a CSV with the columns from our template to bulk add vehicles to your fleet."
       width="form"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} disabled={isUploading}>
             Cancel
           </Button>
           <Button
             variant="primary"
-            onClick={() => {
-              toast.info(
-                toasts.notImplemented(
-                  "CSV import — 0 vehicles imported"
-                )
-              );
-              onClose();
-            }}
-            disabled
+            onClick={handleImport}
+            disabled={!file || isUploading}
           >
-            Import vehicles
+            {isUploading ? "Importing..." : "Import vehicles"}
           </Button>
         </>
       }
@@ -598,15 +674,41 @@ function CsvImportModal({
             </button>{" "}
             to see the expected columns.
           </li>
-          <li>Drop your CSV here or click to browse.</li>
+          <li>Select your CSV file below to begin the import.</li>
         </ol>
+
+        <input
+          type="file"
+          accept=".csv"
+          className="hidden"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+        />
+
         <div
-          className="rounded-md border border-dashed border-border-strong bg-surface-2 px-6 py-10 flex flex-col items-center gap-2 text-fg-subtle"
+          onClick={() => !isUploading && fileInputRef.current?.click()}
+          className={cn(
+            "rounded-md border border-dashed px-6 py-10 flex flex-col items-center gap-2 transition-colors cursor-pointer",
+            file 
+              ? "border-accent bg-accent/5 text-accent" 
+              : "border-border-strong bg-surface-2 text-fg-subtle hover:border-accent hover:bg-accent/5 hover:text-accent",
+            isUploading && "opacity-50 cursor-not-allowed"
+          )}
           aria-label="CSV drop zone"
         >
-          <Upload className="size-6" aria-hidden />
-          <p className="text-sm text-fg">Drop CSV here</p>
-          <p className="text-[11px]">or click to browse — CSV import wired in pass 2</p>
+          {file ? (
+            <>
+              <FileCheck className="size-6" />
+              <p className="text-sm font-medium text-fg">{file.name}</p>
+              <p className="text-[11px]">Click to change file</p>
+            </>
+          ) : (
+            <>
+              <Upload className="size-6" aria-hidden />
+              <p className="text-sm text-fg">Click to browse CSV</p>
+              <p className="text-[11px]">Standard CSV files supported</p>
+            </>
+          )}
         </div>
       </div>
     </Modal>

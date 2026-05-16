@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import type { PromptSettings, PromptVersion } from "@/lib/types";
+import { saveTuneVersion } from "@/lib/api";
 
 interface State {
   versions: PromptVersion[];
@@ -123,9 +124,32 @@ export function TuneProvider({
     patchDraft: (p) => dispatch({ type: "patch_draft", patch: p }),
     patchRules: (p) => dispatch({ type: "patch_rules", patch: p }),
     discard: () => dispatch({ type: "discard" }),
-    save: (summary, authorName) =>
-      dispatch({ type: "save", summary, authorName }),
-    rollback: (versionId) => dispatch({ type: "rollback", versionId }),
+    save: (summary, authorName) => {
+      const cur = published(state.versions);
+      const nextLabel = bumpVersion(cur.versionLabel);
+      saveTuneVersion({
+        versionLabel: nextLabel,
+        createdAt: new Date().toISOString(),
+        authorName,
+        settings: state.draft,
+        isRollback: false
+      });
+      dispatch({ type: "save", summary, authorName });
+    },
+    rollback: (versionId) => {
+      const target = state.versions.find((v) => v.id === versionId);
+      if (target) {
+        saveTuneVersion({
+          versionLabel: target.versionLabel,
+          createdAt: new Date().toISOString(),
+          authorName: "System (Rollback)",
+          settings: target.settings,
+          isRollback: true,
+          rollbackFrom: current.versionLabel
+        });
+      }
+      dispatch({ type: "rollback", versionId });
+    },
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
