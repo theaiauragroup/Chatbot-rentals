@@ -96,8 +96,8 @@ const MessageItem = memo(({ message, isGrouped }: { message: Message; isGrouped:
     ul: ({ children, ...props }: any) => (
       <ul className="cw-ul" {...props}>{children}</ul>
     ),
-    li: ({ children, ordered, index, ...props }: any) => (
-      <li className={ordered ? 'cw-li cw-vehicle-li' : 'cw-li'} data-num={ordered && index !== undefined ? index + 1 : undefined} {...props}>{children}</li>
+    li: ({ children, ordered, ...props }: any) => (
+      <li className={ordered ? 'cw-li cw-vehicle-li' : 'cw-li'} {...props}>{children}</li>
     )
   }), [message.id]);
 
@@ -578,27 +578,32 @@ export default function ChatWidget({
         .cw-md a { color: #2563EB; text-decoration: underline; text-underline-offset: 2px; }
         .cw-md strong { font-weight: 600; }
         
-        /* ── Ordered list container ── */
+        /* ══ ORDERED LIST: numbered vehicle cards ══ */
         .cw-ol {
           list-style: none !important;
           padding: 0 !important;
-          margin: 0.5em 0 !important;
+          margin: 0.75em 0 !important;
           display: flex;
           flex-direction: column;
-          gap: 14px;
+          gap: 12px;
+          counter-reset: vehicle-counter;
         }
-        /* ── Each vehicle = subtle card ── */
+
+        /* ══ Each vehicle card ══ */
         .cw-vehicle-li {
-          display: block !important;
+          counter-increment: vehicle-counter;
           list-style: none !important;
+          display: block !important;
           background: #F8F9FA;
-          border: 1px solid rgba(0,0,0,0.08);
+          border: 1px solid rgba(0,0,0,0.09);
           border-radius: 12px;
-          padding: 14px 14px 10px 14px;
+          padding: 12px 14px 12px 14px;
+          position: relative;
         }
-        /* ── Blue number badge ── */
-        .cw-vehicle-li[data-num]::before {
-          content: attr(data-num);
+
+        /* ══ Blue circle number badge — always 1 / 2 / 3 ══ */
+        .cw-vehicle-li::before {
+          content: counter(vehicle-counter);
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -610,29 +615,40 @@ export default function ChatWidget({
           font-size: 11px;
           font-weight: 700;
           margin-bottom: 8px;
+          flex-shrink: 0;
         }
-        /* ── Unordered list (features, bullets) ── */
-        .cw-ul {
-          list-style: disc !important;
-          padding-left: 1.2em !important;
-          margin: 4px 0 2px 0 !important;
+
+        /* ══ Nested bullet list (price / feature lines) ══ */
+        .cw-vehicle-li .cw-ul {
+          list-style: none !important;
+          padding: 0 !important;
+          margin: 4px 0 0 0 !important;
         }
-        .cw-ul > .cw-li {
-          display: list-item !important;
+        .cw-vehicle-li .cw-ul > .cw-li {
+          display: flex !important;
+          align-items: flex-start !important;
+          gap: 6px;
+          list-style: none !important;
           background: none !important;
           border: none !important;
-          padding: 0 !important;
+          padding: 2px 0 !important;
           font-size: 13px;
           color: #374151;
-          margin-bottom: 2px;
         }
-        /* ── Image item: no card background ── */
-        .cw-vehicle-li:has(.cw-image-wrapper) {
-          background: none !important;
-          border: none !important;
-          padding: 4px 0 !important;
+        /* Add a manual blue bullet dot before each text line */
+        .cw-vehicle-li .cw-ul > .cw-li:not(:has(.cw-image-wrapper))::before {
+          content: '•';
+          color: #2563EB;
+          font-size: 14px;
+          line-height: 1.4;
+          flex-shrink: 0;
         }
-        .cw-vehicle-li:has(.cw-image-wrapper)::before {
+        /* Image li: no bullet, no padding, full width */
+        .cw-vehicle-li .cw-ul > .cw-li:has(.cw-image-wrapper) {
+          display: block !important;
+          padding: 8px 0 0 0 !important;
+        }
+        .cw-vehicle-li .cw-ul > .cw-li:has(.cw-image-wrapper)::before {
           display: none !important;
         }
 
