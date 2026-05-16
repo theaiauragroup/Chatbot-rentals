@@ -81,7 +81,7 @@ const MessageItem = memo(({ message, isGrouped }: { message: Message; isGrouped:
   const markdownComponents = useMemo(() => ({
     p: ({ children }: any) => <div className="mb-2 last:mb-0">{children}</div>,
     img: ({ src, alt }: any) => (
-      <div className="my-3 -mx-1">
+      <div className="cw-image-wrapper my-3 -mx-1">
         <ChatImage src={src || ''} alt={alt || ''} messageId={message.id} />
       </div>
     ),
@@ -569,6 +569,7 @@ export default function ChatWidget({
         .cw-md ul { list-style-type: disc !important; list-style-position: outside !important; margin: 0.5em 0 0.5em 1.5em !important; display: block !important; }
         .cw-md ol { list-style-type: decimal !important; list-style-position: outside !important; margin: 0.5em 0 0.5em 1.5em !important; display: block !important; }
         .cw-md li { margin-bottom: 0.25em; display: list-item !important; }
+        .cw-md li:has(.cw-image-wrapper) { list-style-type: none !important; margin-left: -1.2em; }
         .cw-md li > ul, .cw-md li > ol { margin: 0.25em 0 0.25em 1.2em !important; }
         .cw-md code {
           background: rgba(0,0,0,0.06);
