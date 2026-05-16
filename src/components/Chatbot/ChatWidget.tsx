@@ -389,7 +389,7 @@ export default function ChatWidget({
       // 1. Comprehensive URL and Markdown Pre-processor
       // Catches raw URLs, markdown links, and images, and converts them to proper image tags.
       // Now handles multiple trailing parentheses aggressively.
-      const preProcessedReply = reply.replace(/(?:!?\[([^\]]*)\]\s*\()?(\bhttps?:\/\/[^\s\)]+)(?:\s*\)+)?/gi, (match, alt, url) => {
+      const preProcessedReply = reply.replace(/(?:!?\[([^\]]*)\]\s*\()?(\bhttps?:\/\/[^\s\)]+)(?:\s*\)+)?/gi, (match: string, alt: string, url: string) => {
         const cleanUrl = url.trim().replace(/\s+/g, '');
         const isImage = cleanUrl.includes('unsplash.com') || cleanUrl.match(/\.(jpg|jpeg|png|webp|gif)/i);
         const altText = alt || 'Vehicle';
@@ -403,7 +403,7 @@ export default function ChatWidget({
 
       // 2. Super-Sanitizer: Repairs any remaining broken markdown and NUCLEARLY removes stray artifacts
       const sanitizedReply = preProcessedReply
-        .replace(/(?:!)?\[([^\]]*)\][\s\n]*\(([^)]+)\)(?:\s*\))*/g, (match, alt, url) => {
+        .replace(/(?:!)?\[([^\]]*)\][\s\n]*\(([^)]+)\)(?:\s*\))*/g, (match: string, alt: string, url: string) => {
           const cleanUrl = url.replace(/[\s\n\r\t]/g, '').trim();
           if (!cleanUrl) return match;
           const looksLikeImage = alt.toLowerCase().includes('image') || alt.toLowerCase().includes('photo') || cleanUrl.includes('unsplash.com') || cleanUrl.match(/\.(jpg|jpeg|png|webp|gif)/i);
