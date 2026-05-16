@@ -248,32 +248,20 @@ export default function ChatWidget({
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [userId] = useState(() => {
     if (typeof window !== 'undefined') {
-      const lastInteraction = localStorage.getItem('chat_last_interaction');
-      const oneDayInMs = 24 * 60 * 60 * 1000;
+      // 1. Check sessionStorage for an existing session in this browser tab/window
+      const activeSessionId = sessionStorage.getItem('chat_session_id');
+      if (activeSessionId) return activeSessionId;
 
-      if (lastInteraction && (Date.now() - parseInt(lastInteraction)) > oneDayInMs) {
-        localStorage.removeItem('chatMessages');
-        localStorage.removeItem('chat_session_id');
-        localStorage.removeItem('chat_last_interaction');
-      }
-
-      const savedId = localStorage.getItem('chat_session_id');
-      // If we have a saved ID, but it's in the old format (doesn't start with AB-), clear it to force migration
-      if (savedId && savedId.startsWith('AB-')) return savedId;
+      // 2. Generate a unique session ID for this new browser session
+      // We use a random alphanumeric suffix to ensure uniqueness across all users
+      // while keeping the 'AB-' prefix format.
+      const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase();
+      const newId = `AB-${randomSuffix}`;
       
-      localStorage.removeItem('chatMessages'); // Optional: clear old messages too if ID changes
-      localStorage.removeItem('chat_session_id');
-
-      // Generate incrementing AB-001 format
-      const currentCount = parseInt(localStorage.getItem('chat_session_counter') || '0', 10);
-      const nextCount = currentCount + 1;
-      localStorage.setItem('chat_session_counter', nextCount.toString());
-      
-      const newId = `AB-${nextCount.toString().padStart(3, '0')}`;
-      localStorage.setItem('chat_session_id', newId);
+      sessionStorage.setItem('chat_session_id', newId);
       return newId;
     }
-    return 'AB-001';
+    return 'AB-000';
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -284,7 +272,8 @@ export default function ChatWidget({
 
   useEffect(() => {
     setMounted(true);
-    const savedMessages = localStorage.getItem('chatMessages');
+    // Restore messages from sessionStorage (persists across refreshes, but not across new sessions/tab closes)
+    const savedMessages = sessionStorage.getItem('chatMessages');
     if (savedMessages) {
       try {
         const parsed = JSON.parse(savedMessages);
@@ -294,16 +283,16 @@ export default function ChatWidget({
         }));
         setMessages(restored);
       } catch {
-        // Fallback to welcome
+        // Fallback to welcome message if parsing fails
       }
     }
   }, []);
 
   useEffect(() => {
     if (messages.length > 1) {
+      // Persist messages within the current browser session
       const toSave = messages.map(m => ({ ...m, audioUrl: undefined }));
-      localStorage.setItem('chatMessages', JSON.stringify(toSave));
-      localStorage.setItem('chat_last_interaction', Date.now().toString());
+      sessionStorage.setItem('chatMessages', JSON.stringify(toSave));
     }
   }, [messages]);
 
