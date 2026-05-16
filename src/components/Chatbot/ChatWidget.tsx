@@ -438,7 +438,7 @@ export default function ChatWidget({
 
       // Ultimate auto-numbering failsafe: Guarantees car titles are sequentially numbered
       let autoCounter = 1;
-      const finalReply = sanitizedReply.replace(/(^|\n+)(?:\d+\.\s+)?\*\*(.*?)\*\*(?=\s*(\n|$))/g, (match, prefix, content) => {
+      const finalReply = sanitizedReply.replace(/(^|\n+)(?:\d+\.\s+)?\*\*(.*?)\*\*(?=\s*(\n|$))/g, (match: string, prefix: string, content: string) => {
         const txt = content.trim();
         if (txt.length >= 5 && txt.length <= 60 && !txt.includes(':') && !txt.includes('?')) {
           return `${prefix}${autoCounter++}. **${txt}**`;
