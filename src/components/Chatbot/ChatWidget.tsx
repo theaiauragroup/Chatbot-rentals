@@ -413,7 +413,7 @@ export default function ChatWidget({
         .replace(/\(\s*(!\[[^\]]*\]\([^)]+\))\s*\)/g, '$1')
         // Nuclear cleanup of stray brackets on their own lines or before text
         .split('\n')
-        .map(line => {
+        .map((line: string) => {
           const trimmed = line.trim();
           // If the line is JUST a closing bracket or artifact, kill it
           if (trimmed === ')' || trimmed === ']]' || trimmed === ']' || trimmed === '))') return '';

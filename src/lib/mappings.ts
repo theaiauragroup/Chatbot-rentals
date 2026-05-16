@@ -126,14 +126,20 @@ export function mapWebhookChat(raw: any, index: number): Chat {
   };
 
   const id = String(find("Session ID", "id", "ID", "session_id", "Tenant ID") || `session-${index}`);
-  
+  const timestamp = String(find("Last Activity At", "Timestamp", "timestamp", "Updated At", "started_at") || new Date().toISOString());
+
   return {
     id,
-    customerName: find("Full Name", "Name", "customer_name") || "Anonymous",
-    lastMessage: find("Last Message", "latest_message", "message") || "No messages",
-    timestamp: find("Last Activity At", "Timestamp", "timestamp", "Updated At") || new Date().toISOString(),
-    status: find("Status", "temp", "temperature") || "new",
-    unreadCount: 0,
-    messages: []
+    startedAt: timestamp,
+    lastMessageAt: timestamp,
+    durationSec: 0,
+    customerName: String(find("Full Name", "Name", "customer_name") || "Anonymous"),
+    customerPhone: find("Phone Number", "phone", "customer_phone"),
+    customerEmail: find("Email Address", "email", "customer_email"),
+    messages: [],
+    vehicleIdsOfInterest: [],
+    finalTemperature: "cold",
+    channel: "web_widget",
+    outcome: "in_progress"
   };
 }
