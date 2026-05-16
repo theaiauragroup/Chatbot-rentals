@@ -10,11 +10,14 @@ export async function POST(request: Request) {
     }
 
     // Forward to ImgBB for permanent hosting (Works on Vercel!)
-    // Using a public API key for immediate functionality
     const IMGBB_API_KEY = '71f4560731604a08153408546f041280';
     
+    // Convert file to base64 for reliable API transmission
+    const bytes = await file.arrayBuffer();
+    const base64 = Buffer.from(bytes).toString('base64');
+    
     const body = new FormData();
-    body.append('image', file);
+    body.append('image', base64);
 
     const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
       method: 'POST',

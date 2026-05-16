@@ -35,34 +35,69 @@ export function PhotoPicker({
     const availableSlots = max - photos.length;
     const filesToProcess = Array.from(files).slice(0, availableSlots);
 
-    info(`Uploading ${filesToProcess.length} photo(s)...`);
+    info(`Processing ${filesToProcess.length} photo(s)...`);
+    
     const promises = filesToProcess.map(async (file) => {
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
-        
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-        
-        if (!response.ok) throw new Error("Upload failed");
-        const data = await response.json();
-        return data.url as string;
-      } catch (err) {
-        console.error("Upload error:", err);
-        throw err;
-      }
+      return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const result = e.target?.result;
+          if (!result) {
+            return reject(new Error("Failed to read file"));
+          }
+
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              let width = img.width;
+              let height = img.height;
+
+              const MAX_SIZE = 800;
+              if (width > height) {
+                if (width > MAX_SIZE) {
+                  height *= MAX_SIZE / width;
+                  width = MAX_SIZE;
+                }
+              } else {
+                if (height > MAX_SIZE) {
+                  width *= MAX_SIZE / height;
+                  height = MAX_SIZE;
+                }
+              }
+
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) {
+                return reject(new Error("Could not create canvas context"));
+              }
+              
+              ctx.drawImage(img, 0, 0, width, height);
+              
+              const base64 = canvas.toDataURL('image/jpeg', 0.5); // Slightly more compression
+              console.log(`Image processed. Original: ${file.size} bytes, Compressed: ${base64.length} chars`);
+              resolve(base64);
+            } catch (err) {
+              reject(err);
+            }
+          };
+          img.onerror = () => reject(new Error("Failed to load image into memory"));
+          img.src = result as string;
+        };
+        reader.onerror = () => reject(new Error("Failed to read file from disk"));
+        reader.readAsDataURL(file);
+      });
     });
 
     Promise.all(promises)
       .then((urls) => {
         onChange([...photos, ...urls]);
-        success(`Successfully uploaded ${urls.length} photo(s)`);
+        success(`Successfully processed ${urls.length} photo(s)`);
       })
-      .catch((err) => {
-        console.error("Error uploading files:", err);
-        danger("Failed to upload photos. Please try again.");
+      .catch((err: any) => {
+        console.error("Image processing error:", err);
+        danger(`Error: ${err.message || "Failed to process photos"}`);
       });
 
     if (fileInputRef.current) {
