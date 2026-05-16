@@ -81,7 +81,7 @@ const MessageItem = memo(({ message, isGrouped }: { message: Message; isGrouped:
   const markdownComponents = useMemo(() => ({
     p: ({ children }: any) => <div className="mb-2 last:mb-0">{children}</div>,
     img: ({ src, alt }: any) => (
-      <div className="cw-image-wrapper my-2 -mx-0">
+      <div className="cw-image-wrapper my-3 -mx-1">
         <ChatImage src={src || ''} alt={alt || ''} messageId={message.id} />
       </div>
     ),
@@ -91,16 +91,13 @@ const MessageItem = memo(({ message, isGrouped }: { message: Message; isGrouped:
       </a>
     ),
     ol: ({ children, ...props }: any) => (
-      <ol className="cw-ol cw-vehicle-list flex flex-col gap-3 my-3 -mx-2" {...props}>{children}</ol>
+      <ol className="cw-ol" {...props}>{children}</ol>
     ),
     ul: ({ children, ...props }: any) => (
-      <ul className="cw-ul flex flex-col gap-1.5 my-2" {...props}>{children}</ul>
+      <ul className="cw-ul" {...props}>{children}</ul>
     ),
-    li: ({ children, ...props }: any) => (
-      <li className="cw-li cw-vehicle-item" {...props}>{children}</li>
-    ),
-    strong: ({ children }: any) => (
-      <strong className="cw-vehicle-title font-semibold">{children}</strong>
+    li: ({ children, ordered, index, ...props }: any) => (
+      <li className={ordered ? 'cw-li cw-vehicle-li' : 'cw-li'} data-num={ordered && index !== undefined ? index + 1 : undefined} {...props}>{children}</li>
     )
   }), [message.id]);
 
@@ -433,25 +430,17 @@ export default function ChatWidget({
         })
         .join('\n')
         .replace(/\n\s*\)\s*(?=\*\*|\w)/g, '\n')
+        // Ensure a blank line before every ordered list item so react-markdown parses them correctly
+        .replace(/(\n)([ \t]*\d+\.[ \t]+)/g, '\n\n$2')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 
-      // Ultimate auto-numbering failsafe: Guarantees car titles are sequentially numbered
-      let autoCounter = 1;
-      const finalReply = sanitizedReply.replace(/(^|\n+)(?:\d+\.\s+)?\*\*(.*?)\*\*(?=\s*(\n|$))/g, (match: string, prefix: string, content: string) => {
-        const txt = content.trim();
-        if (txt.length >= 5 && txt.length <= 60 && !txt.includes(':') && !txt.includes('?')) {
-          return `${prefix}${autoCounter++}. **${txt}**`;
-        }
-        return match;
-      });
-
-      const extractedUrls = extractImageUrls(finalReply);
+      const extractedUrls = extractImageUrls(sanitizedReply);
 
       setMessages(prev => [...prev, {
         id: `msg_${Date.now()}_bot`,
         role: 'assistant',
-        content: finalReply,
+        content: sanitizedReply,
         type: 'text',
         imageUrls: extractedUrls,
         timestamp: new Date()
@@ -589,130 +578,62 @@ export default function ChatWidget({
         .cw-md a { color: #2563EB; text-decoration: underline; text-underline-offset: 2px; }
         .cw-md strong { font-weight: 600; }
         
-        /* ========== PROFESSIONAL VEHICLE LISTING STYLES ========== */
-        
-        /* Vehicle List Container - Card-style presentation */
-        .cw-vehicle-list { 
-          list-style-type: none !important;
-          padding-left: 0 !important;
-          margin-left: 0 !important;
-          counter-reset: vehicle-counter;
+        /* ── Ordered list container ── */
+        .cw-ol {
+          list-style: none !important;
+          padding: 0 !important;
+          margin: 0.5em 0 !important;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
         }
-        
-        /* Individual Vehicle Item - Professional card layout */
-        .cw-vehicle-item {
+        /* ── Each vehicle = subtle card ── */
+        .cw-vehicle-li {
           display: block !important;
           list-style: none !important;
-          background: linear-gradient(135deg, #FAFAFA 0%, #F5F5F5 100%);
-          border: 1px solid rgba(0,0,0,0.06);
+          background: #F8F9FA;
+          border: 1px solid rgba(0,0,0,0.08);
           border-radius: 12px;
-          padding: 14px;
-          margin-bottom: 12px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-          transition: all 0.2s ease;
-          position: relative;
-          overflow: hidden;
+          padding: 14px 14px 10px 14px;
         }
-        
-        .cw-vehicle-item:hover {
-          box-shadow: 0 3px 8px rgba(0,0,0,0.08);
-          transform: translateY(-1px);
-          border-color: rgba(37,99,235,0.2);
-        }
-        
-        /* Number Badge - Professional numbering */
-        .cw-vehicle-item::before {
-          counter-increment: vehicle-counter;
-          content: counter(vehicle-counter);
-          position: absolute;
-          top: 12px;
-          left: 12px;
-          background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
-          color: white;
-          font-size: 11px;
-          font-weight: 700;
+        /* ── Blue number badge ── */
+        .cw-vehicle-li[data-num]::before {
+          content: attr(data-num);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
           width: 22px;
           height: 22px;
           border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 2px 6px rgba(37,99,235,0.3);
-          z-index: 2;
+          background: #2563EB;
+          color: #fff;
+          font-size: 11px;
+          font-weight: 700;
+          margin-bottom: 8px;
         }
-        
-        /* Vehicle Title Styling */
-        .cw-vehicle-item .cw-vehicle-title,
-        .cw-vehicle-item strong:first-of-type {
-          display: block;
-          font-size: 15px !important;
-          font-weight: 700 !important;
-          color: #111827;
-          margin: 0 0 8px 0;
-          padding-left: 32px;
-          line-height: 1.3;
+        /* ── Unordered list (features, bullets) ── */
+        .cw-ul {
+          list-style: disc !important;
+          padding-left: 1.2em !important;
+          margin: 4px 0 2px 0 !important;
         }
-        
-        /* Vehicle Details Text */
-        .cw-vehicle-item p {
+        .cw-ul > .cw-li {
+          display: list-item !important;
+          background: none !important;
+          border: none !important;
+          padding: 0 !important;
           font-size: 13px;
-          line-height: 1.6;
-          color: #4B5563;
-          margin: 6px 0;
+          color: #374151;
+          margin-bottom: 2px;
         }
-        
-        /* Image within vehicle card - contained and professional */
-        .cw-vehicle-item .cw-image-wrapper {
-          margin: 10px 0 0 0 !important;
-          border-radius: 8px;
-          overflow: hidden;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        /* ── Image item: no card background ── */
+        .cw-vehicle-li:has(.cw-image-wrapper) {
+          background: none !important;
+          border: none !important;
+          padding: 4px 0 !important;
         }
-        
-        .cw-vehicle-item .cw-image-wrapper img {
-          max-height: 240px !important;
-          border-radius: 8px;
-        }
-        
-        /* Price and Key Info Highlighting */
-        .cw-vehicle-item p:has(strong) {
-          background: rgba(37,99,235,0.04);
-          padding: 6px 10px;
-          border-radius: 6px;
-          margin: 8px 0;
-          border-left: 3px solid #2563EB;
-        }
-        
-        /* ========== END VEHICLE LISTING STYLES ========== */
-        
-        /* Standard List Styling (for non-vehicle lists) */
-        .cw-ol:not(.cw-vehicle-list) { 
-          list-style-type: decimal !important; 
-          list-style-position: inside !important; 
-          margin-left: 0.5em !important; 
-        }
-        .cw-ol:not(.cw-vehicle-list) > .cw-li::marker { 
-          font-weight: 600; 
-          font-size: 14px; 
-        }
-        
-        .cw-ul { 
-          list-style-type: disc !important; 
-          list-style-position: outside !important; 
-          margin-left: 1.5em !important; 
-        }
-        .cw-ul > .cw-li::marker { 
-          font-size: 12px; 
-          color: rgba(0,0,0,0.6); 
-        }
-        
-        .cw-li:not(.cw-vehicle-item) { 
-          margin-bottom: 0.25em; 
-          display: list-item !important; 
-        }
-        .cw-li:has(.cw-image-wrapper):not(.cw-vehicle-item) { 
-          list-style-type: none !important; 
-          margin-left: -1.5em; 
+        .cw-vehicle-li:has(.cw-image-wrapper)::before {
+          display: none !important;
         }
 
         .cw-md code {
