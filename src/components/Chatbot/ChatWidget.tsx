@@ -444,19 +444,19 @@ export default function ChatWidget({
       // The webhook sends plain text blocks starting with "Model:".
       // Detect each one and prepend 1. / 2. / 3. so the user always sees numbering.
       let numbered = sanitizedReply;
-      if (/Model\s*:/i.test(sanitizedReply)) {
-        // Case 1: plain "Model:" format (what we see in the screenshot)
+      if (/Model\s*[:-]/i.test(sanitizedReply)) {
+        // Case 1: plain "Model:" or "Model -" format
         let n = 1;
         numbered = sanitizedReply.replace(
-          /(^|\n\n?)([ \t]*Model\s*:)/gi,
-          (_m: string, sep: string, label: string) => `${sep}${n++}.\n${label}`
+          /(^|\n\n?)([ \t]*Model\s*[:-])/gi,
+          (_m: string, sep: string, label: string) => `${sep}**${n++})** ${label}`
         );
       } else if (/\*\*[^*\n]{4,55}\*\*/.test(sanitizedReply)) {
         // Case 2: bold markdown titles — fallback
         let n = 1;
         numbered = sanitizedReply.replace(
-          /^([ \t]*)(?:\d+\.\s+)?\*\*([^*\n]{4,55})\*\*/gm,
-          (_m: string, indent: string, title: string) => `${indent}${n++}. **${title}**`
+          /^([ \t]*)(?:\d+[\.\)])?\s*\*\*([^*\n]{4,55})\*\*/gm,
+          (_m: string, indent: string, title: string) => `${indent}**${n++})** **${title}**`
         );
       }
 
