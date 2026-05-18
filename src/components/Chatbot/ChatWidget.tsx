@@ -443,10 +443,10 @@ export default function ChatWidget({
       // ── Frontend numbering injection ──────────────────────────────────────
       let numbered = sanitizedReply;
       
-      // 1. Strip out any existing manual numbers like "1)", "1.", "1)\n\n" that appear right before a Model line
+      // 1. Strip out any existing manual numbers like "1", "1)", "1.", "1)\n\n" that appear right before a Model line
       // This prevents double-numbering if the webhook already provides numbers.
       numbered = numbered.replace(
-        /(^|\n)[ \t]*\d+[\.\)]\s*(?=[ \t]*(?:\*\*)*Model(?:\*\*)*\s*[:-])/gi, 
+        /(^|\n)[ \t]*\d+(?:[\.\)]|(?:\s*\n\s*))*(?=[ \t]*(?:\*\*)*Model(?:\*\*)*\s*[:-]?)/gi, 
         '$1'
       );
 
