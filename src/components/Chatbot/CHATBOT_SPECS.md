@@ -5,8 +5,8 @@ This document outlines the architecture, payload specifications, and core featur
 ## 🚀 Core Features
 
 ### 1. Persistent Session Management
-- **Session ID**: Every user is assigned a unique ID starting with `session-`.
-- **Persistence**: The ID is stored in `localStorage` to ensure the conversation remains linked to the same user even after a page refresh.
+- **Session ID**: Every user is assigned a unique ID following the format `A-XX` (e.g., `A-01`, `A-02`).
+- **Persistence**: The ID is stored in `sessionStorage` to ensure the conversation remains linked to the same user even after a page refresh.
 - **24-Hour Expiry**: If a user has not interacted with the chatbot for more than 24 hours, the history and Session ID are automatically purged, and a fresh session is started.
 
 ### 2. Multi-Media Support
@@ -30,8 +30,8 @@ When a user sends a message, the following JSON is sent to the configured `webho
 ```json
 {
   "message": "[Text or Voice/Image Placeholder]",
-  "userId": "session-1778...",
-  "sessionId": "session-1778...",
+  "userId": "A-01",
+  "sessionId": "A-01",
   "audio": "data:audio/webm;base64,...", // Optional: Only for voice
   "audioType": "voice",                  // Optional: Only for voice
   "duration": 5,                         // Optional: Only for voice

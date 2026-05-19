@@ -262,15 +262,15 @@ export default function ChatWidget({
       if (activeSessionId) return activeSessionId;
 
       // 2. Generate a unique session ID for this new browser session
-      // We use a random alphanumeric suffix to ensure uniqueness across all users
-      // while keeping the 'AB-' prefix format.
-      const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase();
-      const newId = `AB-${randomSuffix}`;
+      // We use a random two-digit number (from 01 to 99) formatted as A-XX (e.g. A-01, A-02).
+      const randomNum = Math.floor(Math.random() * 99) + 1;
+      const formattedNum = String(randomNum).padStart(2, '0');
+      const newId = `A-${formattedNum}`;
       
       sessionStorage.setItem('chat_session_id', newId);
       return newId;
     }
-    return 'AB-000';
+    return 'A-01';
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
