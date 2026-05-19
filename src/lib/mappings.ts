@@ -98,7 +98,36 @@ export function mapWebhookVehicle(raw: any): Vehicle {
     transmission: (String(find("Transmission", "Gearbox") || "automatic").toLowerCase() as any),
     fuel: (String(find("Fuel Type", "Fuel") || "gasoline").toLowerCase() as any),
     mileageKm: Number(String(find("Mileage Limit (per day)", "Mileage", "Limit", "KM") || "0").replace(/[^0-9.]/g, '')),
-    photos: String(find("Image URL", "Photos", "Images", "Picture") || "").split(",").map(s => s.trim()).filter(Boolean),
+    photos: (() => {
+      const rawPhotos = String(find("Image URL", "Photos", "Images", "Picture") || "");
+      if (!rawPhotos) return [];
+      let counter = 0;
+      const placeholders: Record<string, string> = {};
+      const protectedStr = rawPhotos.replace(/data:image\/[a-zA-Z+]+;base64,/gi, (match) => {
+        const placeholder = `___B64_PL_${counter++}___`;
+        placeholders[placeholder] = match;
+        return placeholder;
+      });
+
+      return protectedStr
+        .split(",")
+        .map((part) => {
+          let restored = part.trim();
+          Object.keys(placeholders).forEach((pl) => {
+            restored = restored.replace(pl, placeholders[pl]);
+          });
+          if (!restored) return "";
+          if (restored.startsWith("data:image/") || restored.startsWith("http://") || restored.startsWith("https://") || restored.startsWith("/")) {
+            return restored;
+          }
+          if (restored.startsWith("/9j/")) return `data:image/jpeg;base64,${restored}`;
+          if (restored.startsWith("iVBORw")) return `data:image/png;base64,${restored}`;
+          if (restored.startsWith("R0lGOD")) return `data:image/gif;base64,${restored}`;
+          if (restored.startsWith("UklGR")) return `data:image/webp;base64,${restored}`;
+          return restored;
+        })
+        .filter(Boolean);
+    })(),
     features: String(find("Features", "Options", "Equipment") || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean) as any,
     status,
     blocks: [],

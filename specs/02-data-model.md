@@ -119,7 +119,7 @@ export interface Vehicle {
   transmission: Transmission;
   fuel: Fuel;
   mileageKm: number;
-  photos: string[];                   // URLs under /mock/cars/
+  photos: string[];                   // URLs under /mock/cars/, remote CDN URLs, or base64 strings (with/without data URI prefix)
   features: Feature[];
   status: VehicleStatus;
   blocks: BookingRange[];
