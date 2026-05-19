@@ -30,12 +30,38 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
+    
+    // Map camelCase fields back to the exact database column headers specified by the user:
+    // Lead ID, Date Captured, Full Name, Phone Number, Email Address, Vehicle Interest, Rental Dates, Contact Made, Call Outcome, User Sentiment, Still Interested, Follow-up Scheduled, Do Not Call, Conversation Summary, Call Transcript, Call Summary (AI), Lead Source, Call Recording URL, Call Duration
+    const mappedBody = {
+      ...body,
+      "Lead ID": body.leadId || body.id,
+      "Date Captured": body.dateCaptured,
+      "Full Name": body.fullName,
+      "Phone Number": body.phoneNumber,
+      "Email Address": body.emailAddress,
+      "Vehicle Interest": body.vehicleInterest,
+      "Rental Dates": body.rentalDates,
+      "Contact Made": body.contactMade === true || body.contactMade === "true" || body.contactMade === "Yes" ? "Yes" : "No",
+      "Call Outcome": body.callOutcome,
+      "User Sentiment": body.userSentiment,
+      "Still Interested": body.stillInterested === true || body.stillInterested === "true" || body.stillInterested === "Yes" ? "Yes" : "No",
+      "Follow-up Scheduled": body.followUpScheduled,
+      "Do Not Call": body.doNotCall === true || body.doNotCall === "true" || body.doNotCall === "Yes" ? "Yes" : "No",
+      "Conversation Summary": body.conversationSummary,
+      "Call Transcript": body.callTranscript,
+      "Call Summary (AI)": body.callSummaryAi,
+      "Lead Source": body.leadSource,
+      "Call Recording URL": body.callRecordingUrl,
+      "Call Duration": body.callDurationSec,
+    };
+
     const response = await fetch(EDIT_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(mappedBody),
     });
 
     if (!response.ok) {
@@ -60,12 +86,17 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const body = await request.json();
+    const mappedBody = {
+      ...body,
+      "Lead ID": body.leadId || body.id,
+    };
+
     const response = await fetch(DELETE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(mappedBody),
     });
 
     if (!response.ok) {

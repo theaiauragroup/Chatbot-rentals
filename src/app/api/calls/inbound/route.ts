@@ -30,12 +30,38 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
+    
+    // Map camelCase fields to exact database columns for sheets compatibility
+    const mappedBody = {
+      ...body,
+      "Lead ID": body.leadId || body.id,
+      "Date Captured": body.dateCaptured,
+      "Full Name": body.fullName,
+      "Phone Number": body.phoneNumber,
+      "Email Address": body.emailAddress,
+      "Vehicle Interest": body.vehicleInterest,
+      "Rental Dates": body.rentalDates,
+      "Pickup Location": body.pickupLocation,
+      "Dropoff Location": body.dropoffLocation,
+      "Call Successful": body.callSuccessful === true || body.callSuccessful === "true" || body.callSuccessful === "Yes" ? "Yes" : "No",
+      "User Sentiment": body.userSentiment,
+      "Transfer Requested": body.transferRequested === true || body.transferRequested === "true" || body.transferRequested === "Yes" ? "Yes" : "No",
+      "Next Action": body.nextAction,
+      "Conversation Summary": body.conversationSummary,
+      "Call Transcript": body.callTranscript,
+      "Call Summary (AI)": body.callSummaryAi,
+      "Lead Source": body.leadSource,
+      "Status": body.status,
+      "Call Recording URL": body.callRecordingUrl,
+      "Call Duration": body.callDurationSec,
+    };
+
     const response = await fetch(EDIT_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(mappedBody),
     });
 
     if (!response.ok) {
@@ -60,12 +86,17 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const body = await request.json();
+    const mappedBody = {
+      ...body,
+      "Lead ID": body.leadId || body.id,
+    };
+
     const response = await fetch(DELETE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(mappedBody),
     });
 
     if (!response.ok) {
