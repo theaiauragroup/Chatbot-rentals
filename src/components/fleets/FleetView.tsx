@@ -193,6 +193,18 @@ export function FleetView() {
             Object.keys(placeholders).forEach((pl) => {
               restored = restored.replace(pl, placeholders[pl]);
             });
+            // Clean accidental domain prefix (e.g. "https://chatbot-rentals.vercel.appdata:image/jpeg...")
+            if (restored.includes("data:image/")) {
+              restored = restored.substring(restored.indexOf("data:image/"));
+            } else {
+              const match = restored.match(/https?:\/\/[^\/]+(?:\/)?(.*)/i);
+              if (match && match[1]) {
+                const path = match[1].trim();
+                if (path.startsWith("/9j/") || path.startsWith("iVBORw") || path.startsWith("R0lGOD") || path.startsWith("UklGR") || path.startsWith("9j/")) {
+                  restored = path.startsWith("9j/") ? "/" + path : path;
+                }
+              }
+            }
             if (!restored) return "";
             if (restored.startsWith("data:image/") || restored.startsWith("http://") || restored.startsWith("https://") || restored.startsWith("/")) {
               return restored;
