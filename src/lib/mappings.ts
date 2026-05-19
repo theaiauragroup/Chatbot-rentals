@@ -142,7 +142,42 @@ export function mapWebhookVehicle(raw: any): Vehicle {
     })(),
     features: String(find("Features", "Options", "Equipment") || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean) as any,
     status,
-    blocks: [],
+    blocks: (() => {
+      const rawBlocks = find("Blocks", "Blocked Dates", "Booking Ranges", "Availability", "blocks");
+      if (!rawBlocks) return [];
+      try {
+        if (typeof rawBlocks === "string") {
+          const trimmed = rawBlocks.trim();
+          if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+            return JSON.parse(trimmed);
+          }
+          // Support plain text ranges e.g. "2026-05-27 to 2026-05-30" or list of them
+          const ranges = trimmed.split(/[,;\n]/).map(p => p.trim()).filter(Boolean);
+          const parsedRanges = ranges.map((part, idx) => {
+            const dates = part.match(/\d{4}-\d{2}-\d{2}/g);
+            if (dates && dates.length >= 2) {
+              return {
+                id: `blk_sheet_${idx}`,
+                start: dates[0],
+                end: dates[1],
+                startTime: "09:00",
+                endTime: "18:00",
+                reason: "blocked" as const,
+              };
+            }
+            return null;
+          }).filter(Boolean);
+          if (parsedRanges.length > 0) return parsedRanges;
+        }
+        if (Array.isArray(rawBlocks)) {
+          return rawBlocks;
+        }
+        return [];
+      } catch (e) {
+        console.error("Failed to parse blocks:", e);
+        return [];
+      }
+    })(),
     createdAt: String(find("Created At", "Date", "Added") || new Date().toISOString()),
   };
 }

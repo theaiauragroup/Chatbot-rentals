@@ -84,16 +84,53 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
     }
   }
 
+  async function syncBlocksToWebhook(updatedBlocks: BookingRange[], changedBlock?: BookingRange, isDelete = false) {
+    try {
+      const blockStr = changedBlock ? `${changedBlock.start} to ${changedBlock.end}` : "";
+      await fetch("/api/calender", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: isDelete ? "unblock" : "block",
+          "Car ID": vehicle.id,
+          "Vehicle ID": vehicle.id,
+          "Make": vehicle.make,
+          "Model": vehicle.model,
+          "Plate": vehicle.plate,
+          "Start Date": changedBlock ? changedBlock.start : "",
+          "End Date": changedBlock ? changedBlock.end : "",
+          "Start Time": changedBlock ? changedBlock.startTime : "",
+          "End Time": changedBlock ? changedBlock.endTime : "",
+          "Reason": changedBlock ? changedBlock.reason : "",
+          "start": changedBlock ? changedBlock.start : "",
+          "end": changedBlock ? changedBlock.end : "",
+          "startTime": changedBlock ? changedBlock.startTime : "",
+          "endTime": changedBlock ? changedBlock.endTime : "",
+          "reason": changedBlock ? changedBlock.reason : "",
+          "Blocked Date String": blockStr,
+          "Blocked Dates": JSON.stringify(updatedBlocks),
+          "Blocks": JSON.stringify(updatedBlocks),
+          "blocks": updatedBlocks,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to sync blocks to calendar webhook:", error);
+    }
+  }
+
   function commitCreate() {
     if (!creating) return;
-    store.addBlock(vehicle.id, {
+    const newBlock: BookingRange = {
       id: `blk_${Date.now()}`,
       start: creating.start,
       end: creating.end,
       startTime,
       endTime,
       reason,
-    });
+    };
+    store.addBlock(vehicle.id, newBlock);
+    syncBlocksToWebhook([...vehicle.blocks, newBlock], newBlock, false);
+
     setCreating(null);
     setSelecting({ from: undefined, to: undefined });
     setReason("blocked");
@@ -279,6 +316,8 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
                 variant="destructive"
                 onClick={() => {
                   store.removeBlock(vehicle.id, editingBlock.id);
+                  const remainingBlocks = vehicle.blocks.filter((b) => b.id !== editingBlock.id);
+                  syncBlocksToWebhook(remainingBlocks, editingBlock, true);
                   setEditingBlock(null);
                 }}
               >

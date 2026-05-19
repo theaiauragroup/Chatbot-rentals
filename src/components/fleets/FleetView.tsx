@@ -219,7 +219,42 @@ export function FleetView() {
       })(),
       features: String(find("Features", "Options", "Equipment") || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean) as any,
       status,
-      blocks: [],
+      blocks: (() => {
+        const rawBlocks = find("Blocks", "Blocked Dates", "Booking Ranges", "Availability", "blocks");
+        if (!rawBlocks) return [];
+        try {
+          if (typeof rawBlocks === "string") {
+            const trimmed = rawBlocks.trim();
+            if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+              return JSON.parse(trimmed);
+            }
+            // Support plain text ranges e.g. "2026-05-27 to 2026-05-30" or list of them
+            const ranges = trimmed.split(/[,;\n]/).map(p => p.trim()).filter(Boolean);
+            const parsedRanges = ranges.map((part, idx) => {
+              const dates = part.match(/\d{4}-\d{2}-\d{2}/g);
+              if (dates && dates.length >= 2) {
+                return {
+                  id: `blk_sheet_${idx}`,
+                  start: dates[0],
+                  end: dates[1],
+                  startTime: "09:00",
+                  endTime: "18:00",
+                  reason: "blocked" as const,
+                };
+              }
+              return null;
+            }).filter(Boolean);
+            if (parsedRanges.length > 0) return parsedRanges;
+          }
+          if (Array.isArray(rawBlocks)) {
+            return rawBlocks;
+          }
+          return [];
+        } catch (e) {
+          console.error("Failed to parse blocks:", e);
+          return [];
+        }
+      })(),
       createdAt: String(find("Created At", "Date", "Added") || new Date().toISOString()),
     };
   }
@@ -354,8 +389,29 @@ export function FleetView() {
         label: "Status",
         sortable: true,
         sortAccessor: (v) => v.status,
-        width: 140,
-        render: (v) => <VehicleStatusPill status={v.status} />,
+        width: 185,
+        render: (v) => (
+          <div className="flex flex-col gap-1 items-start">
+            <VehicleStatusPill status={v.status} />
+            {v.blocks && v.blocks.length > 0 && (
+              <div className="flex flex-col gap-1 mt-1 w-full">
+                {v.blocks.map((b) => {
+                  const startConcise = b.start.split("-").slice(1).join("/");
+                  const endConcise = b.end.split("-").slice(1).join("/");
+                  return (
+                    <span 
+                      key={b.id} 
+                      className="text-[10px] font-medium bg-red-500/10 border border-red-500/25 text-red-600 px-2 py-0.5 rounded-sm tabular-nums flex items-center gap-1 w-fit whitespace-nowrap"
+                    >
+                      <span className="w-1 h-1 rounded-full bg-red-500 shrink-0" />
+                      Blocked: {startConcise} → {endConcise}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ),
       },
     ],
     []

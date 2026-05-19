@@ -14,12 +14,51 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Fetch real-time vehicles and blocks to enrich AI context
+    let enrichedBody = { ...body };
+    try {
+      const { getVehicles } = require('@/lib/api');
+      const vehicles = await getVehicles();
+      
+      const fleetAvailabilityContext = vehicles.map((v: any) => {
+        const blocksText = v.blocks.length > 0 
+          ? v.blocks.map((b: any) => `- Blocked from ${b.start}${b.startTime ? ` ${b.startTime}` : ''} to ${b.end}${b.endTime ? ` ${b.endTime}` : ''} (Reason: ${b.reason})`).join('\n')
+          : '- Available on all dates (No blocks)';
+        return `Car: ${v.make} ${v.model} ${v.year} (ID: ${v.id}, Plate: ${v.plate}, Daily Rate: $${v.dailyRateUsd}, Status: ${v.status})\n${blocksText}`;
+      }).join('\n\n');
+
+      enrichedBody = {
+        ...body,
+        fleet: vehicles.map((v: any) => ({
+          id: v.id,
+          make: v.make,
+          model: v.model,
+          year: v.year,
+          plate: v.plate,
+          category: v.category,
+          dailyRateUsd: v.dailyRateUsd,
+          status: v.status,
+          blockedRanges: v.blocks.map((b: any) => ({
+            start: b.start,
+            end: b.end,
+            startTime: b.startTime || "",
+            endTime: b.endTime || "",
+            reason: b.reason,
+          })),
+        })),
+        fleetAvailabilityContext,
+        systemInstructionContext: `IMPORTANT: Use the following real-time fleet availability data to guide your responses. If a customer requests a car that is blocked or rented on their selected dates, excuse yourself politely, explain that the car is unavailable for those specific dates, and recommend another available car from the list.\n\nReal-time Fleet Availability Data:\n${fleetAvailabilityContext}`
+      };
+    } catch (e) {
+      console.error('Failed to enrich chat webhook with fleet context:', e);
+    }
+
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(enrichedBody),
     });
 
     if (!response.ok) {

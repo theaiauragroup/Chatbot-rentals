@@ -17,10 +17,28 @@ type Action =
   | { type: "reorder_photos"; id: ID; photos: string[] }
   | { type: "remove_photo"; id: ID; index: number }
   | { type: "add_photo"; id: ID; src: string }
-  | { type: "set_vehicles"; vehicles: Vehicle[] };
+  | { type: "set_vehicles"; vehicles: Vehicle[] }
+  | { type: "merge_local_blocks"; blocksMap: Record<ID, BookingRange[]> };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
+    case "merge_local_blocks":
+      return {
+        ...state,
+        vehicles: state.vehicles.map((v) => {
+          const local = action.blocksMap[v.id];
+          if (local && local.length > 0) {
+            const merged = [...v.blocks];
+            local.forEach((lb: BookingRange) => {
+              if (!merged.some((mb) => mb.id === lb.id)) {
+                merged.push(lb);
+              }
+            });
+            return { ...v, blocks: merged };
+          }
+          return v;
+        }),
+      };
     case "add_vehicle":
       return { ...state, vehicles: [action.vehicle, ...state.vehicles] };
     case "update_vehicle":
@@ -98,7 +116,31 @@ function reducer(state: State, action: Action): State {
         ),
       };
     case "set_vehicles":
-      return { ...state, vehicles: action.vehicles };
+      let mergedVehicles = action.vehicles;
+      try {
+        if (typeof window !== "undefined") {
+          const backup = localStorage.getItem("vehicle_blocks_backup");
+          if (backup) {
+            const blocksMap = JSON.parse(backup);
+            mergedVehicles = action.vehicles.map((v) => {
+              const local = blocksMap[v.id];
+              if (local && local.length > 0) {
+                const merged = [...v.blocks];
+                local.forEach((lb: BookingRange) => {
+                  if (!merged.some((mb) => mb.id === lb.id)) {
+                    merged.push(lb);
+                  }
+                });
+                return { ...v, blocks: merged };
+              }
+              return v;
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to merge local blocks on set_vehicles:", e);
+      }
+      return { ...state, vehicles: mergedVehicles };
   }
 }
 
@@ -125,6 +167,38 @@ export function FleetProvider({
   children: React.ReactNode;
 }) {
   const [state, dispatch] = React.useReducer(reducer, { vehicles: initialVehicles });
+  const [hasLoadedBackup, setHasLoadedBackup] = React.useState(false);
+
+  // 1. Sync from localStorage on mount
+  React.useEffect(() => {
+    try {
+      const backup = localStorage.getItem("vehicle_blocks_backup");
+      if (backup) {
+        const blocksMap = JSON.parse(backup);
+        dispatch({ type: "merge_local_blocks", blocksMap });
+      }
+    } catch (e) {
+      console.error("Failed to load local blocks backup:", e);
+    } finally {
+      setHasLoadedBackup(true);
+    }
+  }, []);
+
+  // 2. Sync to localStorage whenever vehicles state changes
+  React.useEffect(() => {
+    if (!hasLoadedBackup) return;
+    try {
+      const blocksMap: Record<string, BookingRange[]> = {};
+      state.vehicles.forEach((v) => {
+        if (v.blocks && v.blocks.length > 0) {
+          blocksMap[v.id] = v.blocks;
+        }
+      });
+      localStorage.setItem("vehicle_blocks_backup", JSON.stringify(blocksMap));
+    } catch (e) {
+      console.error("Failed to save local blocks backup:", e);
+    }
+  }, [state.vehicles, hasLoadedBackup]);
 
   const value = React.useMemo<ContextValue>(
     () => ({
