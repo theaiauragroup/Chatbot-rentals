@@ -19,6 +19,7 @@ Define every URL the dashboard owns, how the shell (sidebar + top bar) behaves a
 /fleets/[id]                          Vehicle detail (photos + calendar)
 /settings                             Settings (tabs)
 /settings?tab=twilio                  Settings deep-link
+/calls                                Inbound and outbound call logs
 
 /login                                Static login page (visual stub only, this pass)
                                       No auth wiring; submit redirects to /dashboard.
@@ -146,6 +147,7 @@ Used for:
 | `/fleets/new` | (back) Add vehicle | Add vehicle · AIAURA FLEETS |
 | `/fleets/[id]` | (back) {Make} {Model} | {Make} {Model} · AIAURA FLEETS |
 | `/settings` | Settings | Settings · AIAURA FLEETS |
+| `/calls` | Call Logs | Call Logs · AIAURA FLEETS |
 
 Mock business name "AIAURA FLEETS" lives in `src/lib/mock/manager.ts` — every reference reads from there, never hardcoded inline.
 

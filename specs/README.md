@@ -18,6 +18,7 @@ Source product PDF: `/Users/fatima/Desktop/Car Rental Chatbot.pdf` (AIAURA Solut
 8. [07-section-fleets.md](07-section-fleets.md) — fleet grid, vehicle detail, calendar
 9. [08-section-settings.md](08-section-settings.md) — profile, notifications, Twilio, business, widget, team
 10. [09-mock-interactions.md](09-mock-interactions.md) — what's wired, what stubs to a toast
+11. [10-section-call-logs.md](10-section-call-logs.md) — call logs table, AI call insights, transcript history & custom audio player
 
 ## Scope of this pass
 

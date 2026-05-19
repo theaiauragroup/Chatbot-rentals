@@ -165,6 +165,54 @@ export interface Chat {
   outcome?: 'in_progress' | 'closed' | 'handed_off';
 }
 
+// ─── Call Logs ──────────────────────────────────────────────────────────────
+export interface InboundCall {
+  id: ID;
+  leadId: ID;
+  dateCaptured: ISODateTime;
+  fullName: string;
+  phoneNumber: string;
+  emailAddress?: string;
+  vehicleInterest: string;
+  rentalDates: string;
+  pickupLocation?: string;
+  dropoffLocation?: string;
+  callSuccessful: boolean;
+  userSentiment: 'positive' | 'neutral' | 'negative';
+  transferRequested: boolean;
+  nextAction?: string;
+  conversationSummary?: string;
+  callTranscript?: string;
+  callSummaryAi?: string;
+  leadSource: string;
+  status: 'new' | 'follow-up' | 'closed';
+  callRecordingUrl?: string;
+  callDurationSec: number;
+}
+
+export interface OutboundCall {
+  id: ID;
+  leadId: ID;
+  dateCaptured: ISODateTime;
+  fullName: string;
+  phoneNumber: string;
+  emailAddress?: string;
+  vehicleInterest: string;
+  rentalDates: string;
+  contactMade: boolean;
+  callOutcome: 'interested' | 'not_interested' | 'no_answer' | 'busy' | 'scheduled_callback';
+  userSentiment: 'positive' | 'neutral' | 'negative';
+  stillInterested: boolean;
+  followUpScheduled?: ISODateTime;
+  doNotCall: boolean;
+  conversationSummary?: string;
+  callTranscript?: string;
+  callSummaryAi?: string;
+  leadSource: string;
+  callRecordingUrl?: string;
+  callDurationSec: number;
+}
+
 // ─── Notification ───────────────────────────────────────────────────────────
 export type NotificationType =
   | 'hot_lead' | 'human_handoff' | 'booking_inquiry' | 'daily_summary' | 'system';
