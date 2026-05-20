@@ -204,7 +204,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
       {/* Helper + legend */}
       <div className="mt-3 flex items-center justify-between flex-wrap gap-2 text-[11px]">
         <p className="text-fg-subtle">
-          Drag a range to block dates · Click an existing block to edit
+          Drag a range to schedule dates · Click an existing schedule to edit
         </p>
         <ul className="flex items-center gap-3 text-fg-muted">
           <li className="inline-flex items-center gap-1.5">
@@ -217,7 +217,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
           </li>
           <li className="inline-flex items-center gap-1.5">
             <span aria-hidden className="size-2 rounded-sm bg-surface-2" />
-            Blocked
+            Scheduled
           </li>
         </ul>
       </div>
@@ -228,7 +228,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
         onOpenChange={(o) => {
           if (!o) cancelCreate();
         }}
-        title="Block these dates"
+        title="Schedule these dates"
         description={
           creating
             ? `${formatDate(creating.start)} ${startTime} → ${formatDate(creating.end)} ${endTime}`
@@ -241,7 +241,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
               Cancel
             </Button>
             <Button variant="primary" onClick={commitCreate}>
-              Block dates
+              Schedule dates
             </Button>
           </>
         }
@@ -257,7 +257,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
               }
               className="h-9 px-3 rounded-sm border border-border bg-surface text-base text-fg outline-none focus:ring-2 focus:ring-accent"
             >
-              <option value="blocked">Blocked (manual)</option>
+              <option value="blocked">Scheduled (manual)</option>
               <option value="maintenance">Maintenance</option>
               <option value="rented">Rented (manual entry)</option>
             </select>
@@ -302,7 +302,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
         onOpenChange={(o) => {
           if (!o) setEditingBlock(null);
         }}
-        title="Edit block"
+        title="Edit schedule"
         description={
           editingBlock
             ? `${REASON_LABEL[editingBlock.reason]} · ${formatDate(editingBlock.start)}${editingBlock.startTime ? ` ${editingBlock.startTime}` : ""} → ${formatDate(editingBlock.end)}${editingBlock.endTime ? ` ${editingBlock.endTime}` : ""}`
@@ -321,7 +321,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
                   setEditingBlock(null);
                 }}
               >
-                Delete block
+                Delete schedule
               </Button>
               <div className="flex-1" />
               <Button variant="secondary" onClick={() => setEditingBlock(null)}>
@@ -343,7 +343,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
                   .
                 </>
               ) : (
-                <>This block is manually maintained on this vehicle.</>
+                <>This schedule is manually maintained on this vehicle.</>
               )}
             </p>
             <div className="grid grid-cols-2 gap-3">
