@@ -12,6 +12,12 @@ import {
   X,
   FileCheck,
   AlertCircle,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Wrench,
+  Lock,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -30,6 +36,7 @@ import { Pagination } from "@/components/data/Pagination";
 import { CategoryBadge, VEHICLE_CATEGORY_LABEL } from "./CategoryBadge";
 import { VehicleStatusPill } from "@/components/leads/StatusPill";
 import { VehicleCard } from "./VehicleCard";
+import { FleetWeeklyCalendar } from "./FleetWeeklyCalendar";
 import { useFleetStore } from "./FleetStore";
 import type {
   Vehicle,
@@ -68,7 +75,7 @@ export function FleetView() {
   const params = useSearchParams();
   const store = useFleetStore();
 
-  const view = (params.get("view") ?? "grid") as "grid" | "list";
+  const view = (params.get("view") ?? "grid") as "grid" | "list" | "calendar";
   const category = (params.get("category") ?? "")
     .split(",")
     .filter(Boolean) as VehicleCategory[];
@@ -459,6 +466,7 @@ export function FleetView() {
             options={[
               { value: "grid", label: "Grid", icon: <LayoutGrid className="size-3.5" /> },
               { value: "list", label: "List", icon: <Rows3 className="size-3.5" /> },
+              { value: "calendar", label: "Weekly", icon: <Calendar className="size-3.5" /> },
             ]}
           />
           <Button
@@ -535,6 +543,8 @@ export function FleetView() {
             <Skeleton key={i} className="h-[280px] w-full rounded-xl" />
           ))}
         </div>
+      ) : view === "calendar" ? (
+        <FleetWeeklyCalendar vehicles={visibleGrid} />
       ) : view === "grid" ? (
         gridSorted.length === 0 ? (
           <Card className="py-8">
