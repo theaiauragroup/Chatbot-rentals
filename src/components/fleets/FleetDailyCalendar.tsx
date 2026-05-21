@@ -117,7 +117,7 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
   };
 
   return (
-    <Card className="flex flex-col overflow-hidden bg-surface border border-border h-full shadow-sm rounded-xl">
+    <Card className="flex flex-col overflow-hidden bg-surface border border-border shadow-sm rounded-xl h-[400px]">
       {/* Calendar Header / Controls */}
       {!hideControls && (
         <div className="flex items-center justify-between p-4 border-b border-border bg-surface-2/50 shrink-0">
