@@ -36,7 +36,7 @@ const REASON_LABEL: Record<BookingRange["reason"], string> = {
 
 export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
   const store = useFleetStore();
-  const today = new Date("2026-05-08T00:00:00");
+  const today = new Date("2026-05-21T00:00:00");
   const [month, setMonth] = React.useState(today);
   const [selecting, setSelecting] = React.useState<{
     from: Date | undefined;
