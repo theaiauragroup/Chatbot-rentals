@@ -30,7 +30,7 @@ function ymd(d: Date): string {
 const REASON_LABEL: Record<BookingRange["reason"], string> = {
   rented: "Rented",
   maintenance: "Maintenance",
-  blocked: "Blocked",
+  blocked: "Scheduled",
 };
 
 export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
@@ -269,100 +269,88 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
           const isAvailable = blocksOnViewingDate.length === 0;
 
           return (
-            <div className="rounded-2xl overflow-hidden relative shadow-xl group border border-border/50 bg-surface/50 backdrop-blur-xl">
-              {/* Premium Background Effects */}
-              <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-accent/20 blur-3xl group-hover:scale-110 transition-transform duration-700 pointer-events-none" />
-              <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 rounded-full bg-emerald-500/10 blur-3xl group-hover:scale-110 transition-transform duration-700 pointer-events-none" />
+            <div className="rounded-xl border border-border bg-surface p-6 flex flex-col h-full">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-sm font-semibold text-fg">Daily Overview</h3>
+                <span className="text-xs font-medium text-fg-muted bg-surface-2 px-2 py-1 rounded-md">
+                  {viewingHourly ? formatDate(ymd(viewingHourly)) : formatDate(ymd(today))}
+                </span>
+              </div>
               
-              <div className="relative z-10 p-7 flex flex-col h-full">
-                <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-xl font-bold text-fg tracking-tight">Availability Metrics</h3>
-                  <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-surface-2 text-fg shadow-sm border border-border/80">
-                    {viewingHourly ? formatDate(ymd(viewingHourly)) : formatDate(ymd(today))}
-                  </span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-5 mb-8">
-                  <div className="flex flex-col p-5 rounded-xl bg-surface/60 border border-border/60 hover:bg-surface-2/80 transition-colors shadow-sm">
-                    <span className="text-[11px] text-fg-subtle mb-1.5 uppercase tracking-widest font-semibold">Current Status</span>
-                    {isAvailable ? (
-                      <div className="flex items-center gap-2.5">
-                        <div className="relative flex h-3 w-3">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                        </div>
-                        <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">Available</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2.5">
-                        <div className="size-3 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.6)]" />
-                        <span className="text-xl font-bold text-rose-600 dark:text-rose-400 tracking-tight">Booked</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex flex-col p-5 rounded-xl bg-surface/60 border border-border/60 hover:bg-surface-2/80 transition-colors shadow-sm">
-                    <span className="text-[11px] text-fg-subtle mb-1.5 uppercase tracking-widest font-semibold">Total Blocks</span>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-bold text-fg tracking-tight">{blocksOnViewingDate.length}</span>
-                      <span className="text-xs font-medium text-fg-muted">record(s)</span>
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="flex flex-col p-4 rounded-lg bg-surface-2/50 border border-border/50">
+                  <span className="text-xs text-fg-subtle mb-1">Status</span>
+                  {isAvailable ? (
+                    <div className="flex items-center gap-2">
+                      <div className="size-2 rounded-full bg-emerald-500" />
+                      <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Available</span>
                     </div>
-                  </div>
-                </div>
-                
-                <div className="flex-1 flex flex-col min-h-[160px]">
-                  <span className="text-[11px] text-fg-subtle mb-4 uppercase tracking-widest font-semibold">Schedule Details</span>
-                  {blocksOnViewingDate.length > 0 ? (
-                    <ul className="flex flex-col gap-3">
-                      {blocksOnViewingDate.map(block => (
-                        <li key={block.id} className="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-surface/40 hover:bg-surface-2 hover:border-accent/30 transition-all shadow-sm">
-                          <div className="flex items-center gap-4">
-                            <div className={cn(
-                              "size-2.5 rounded-full shadow-sm",
-                              block.reason === 'rented' ? 'bg-accent' :
-                              block.reason === 'maintenance' ? 'bg-warning' : 'bg-fg-muted'
-                            )} />
-                            <div>
-                              <p className="text-sm font-semibold text-fg">{REASON_LABEL[block.reason]}</p>
-                              <p className="text-xs font-medium text-fg-muted mt-0.5">
-                                {block.startTime || "00:00"} - {block.endTime || "23:59"}
-                              </p>
-                            </div>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => setEditingBlock(block)}
-                            className="text-xs font-semibold text-accent hover:text-accent-fg hover:bg-accent/10 rounded-lg px-3"
-                          >
-                            Edit
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
                   ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center py-8 text-center bg-surface-2/20 rounded-xl border border-dashed border-border/60">
-                      <div className="size-12 rounded-full bg-surface-2/80 flex items-center justify-center mb-3 shadow-sm border border-border/50">
-                        <Car className="size-5 text-fg-muted" />
-                      </div>
-                      <p className="text-sm font-semibold text-fg">No schedule blocks</p>
-                      <p className="text-xs text-fg-subtle mt-1 max-w-[200px]">This vehicle is completely free on this date.</p>
+                    <div className="flex items-center gap-2">
+                      <div className="size-2 rounded-full bg-rose-500" />
+                      <span className="text-sm font-medium text-rose-600 dark:text-rose-400">Scheduled</span>
                     </div>
                   )}
                 </div>
                 
-                <Button 
-                  variant="primary" 
-                  className="w-full mt-8 shadow-md hover:shadow-lg transition-all text-sm font-semibold py-5"
-                  onClick={() => {
-                    const d = viewingHourly || today;
-                    const dateStr = ymd(d);
-                    setCreating({ start: dateStr, end: dateStr });
-                  }}
-                >
-                  + Add Schedule Block
-                </Button>
+                <div className="flex flex-col p-4 rounded-lg bg-surface-2/50 border border-border/50">
+                  <span className="text-xs text-fg-subtle mb-1">Total Scheduled</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-sm font-medium text-fg">{blocksOnViewingDate.length}</span>
+                    <span className="text-xs text-fg-muted">record(s)</span>
+                  </div>
+                </div>
               </div>
+              
+              <div className="flex-1 flex flex-col">
+                <span className="text-xs font-medium text-fg-muted mb-3">Schedule Details</span>
+                {blocksOnViewingDate.length > 0 ? (
+                  <ul className="flex flex-col gap-2">
+                    {blocksOnViewingDate.map(block => (
+                      <li key={block.id} className="flex items-center justify-between p-3 rounded-lg border border-border/40 hover:bg-surface-2/50 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "size-2 rounded-sm",
+                            block.reason === 'rented' ? 'bg-accent' :
+                            block.reason === 'maintenance' ? 'bg-warning' : 'bg-surface-2 border border-border'
+                          )} />
+                          <div>
+                            <p className="text-sm text-fg">{REASON_LABEL[block.reason]}</p>
+                            <p className="text-[11px] text-fg-muted">
+                              {block.startTime || "00:00"} - {block.endTime || "23:59"}
+                            </p>
+                          </div>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setEditingBlock(block)}
+                          className="text-xs h-7 text-accent hover:text-accent-fg"
+                        >
+                          Edit
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center py-6 text-center">
+                    <p className="text-sm text-fg-muted">No schedule records</p>
+                    <p className="text-[11px] text-fg-subtle mt-1">This vehicle is free on this date.</p>
+                  </div>
+                )}
+              </div>
+              
+              <Button 
+                variant="secondary" 
+                className="w-full mt-6 text-xs"
+                onClick={() => {
+                  const d = viewingHourly || today;
+                  const dateStr = ymd(d);
+                  setCreating({ start: dateStr, end: dateStr });
+                }}
+              >
+                + Add Schedule
+              </Button>
             </div>
           );
         })()}
