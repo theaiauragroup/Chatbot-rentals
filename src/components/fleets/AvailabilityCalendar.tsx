@@ -246,6 +246,8 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
           }}
         />
       </div>
+      </div>
+      </div>
       {/* Create modal */}
       <Modal
         open={!!creating}
