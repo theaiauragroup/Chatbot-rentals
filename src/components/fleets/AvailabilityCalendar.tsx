@@ -159,6 +159,10 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
     store.addBlock(vehicle.id, newBlock);
     syncBlocksToWebhook([...vehicle.blocks, newBlock], newBlock, false);
 
+    // Keep viewing the scheduled date to see the badge appear
+    const scheduledDate = new Date(creating.start + "T00:00:00");
+    setViewingHourly(scheduledDate);
+    
     setCreating(null);
     setSelecting({ from: undefined, to: undefined });
     setReason("blocked");
@@ -264,6 +268,9 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
           selectedHours={creating && !allDay ? selectedHours : null}
           onAddSchedule={(d, hour) => {
             const selectedDate = ymd(d);
+            
+            // Update viewing date to match what user is scheduling
+            setViewingHourly(d);
             setCreating({ start: selectedDate, end: selectedDate });
             
             if (hour !== undefined) {
