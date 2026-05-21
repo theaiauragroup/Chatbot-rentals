@@ -199,7 +199,8 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
   return (
     <div>
       <div className="flex flex-col xl:flex-row gap-8 items-start">
-        <div className="shrink-0 flex flex-col">
+        {/* Calendar Section - 50% width */}
+        <div className="w-full xl:w-1/2 shrink-0 flex flex-col">
         <DayPicker
           mode="range"
           numberOfMonths={2}
@@ -275,7 +276,8 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
       </div>
       </div>
       
-      <div className="flex-1 min-w-0">
+      {/* Hourly Section - 50% width */}
+      <div className="w-full xl:w-1/2 shrink-0">
         <FleetDailyCalendar 
           vehicles={[vehicle]} 
           initialDate={viewingHourly || undefined}
