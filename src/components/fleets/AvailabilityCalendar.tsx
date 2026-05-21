@@ -110,13 +110,21 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
     if (!range) return;
     setSelecting({ from: range.from, to: range.to });
     if (range.from && range.to && range.from.getTime() !== range.to.getTime()) {
+      // Multi-day range selection
       const startDate = ymd(range.from);
       const endDate = ymd(range.to);
       setCreating({ start: startDate, end: endDate });
       // Notify webhook of date range selection
       notifySelectionToWebhook(startDate, endDate);
+    } else if (range.from && range.to && range.from.getTime() === range.to.getTime()) {
+      // Single day selected with both from and to (same day)
+      const selectedDate = ymd(range.from);
+      setCreating({ start: selectedDate, end: selectedDate });
+      // Notify webhook of single day selection
+      notifySelectionToWebhook(selectedDate, selectedDate);
     } else if (range.from && !range.to) {
-      // single-day selection — open hourly view
+      // Single click - could be start of range OR single day intent
+      // Open hourly view for detailed scheduling
       setViewingHourly(range.from);
       setSelecting({ from: undefined, to: undefined });
       // Notify webhook of single day selection
@@ -129,6 +137,11 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
     const block = findBlockByDate(d);
     if (block) {
       setEditingBlock(block);
+    } else {
+      // Single click on empty day - open scheduling modal immediately
+      const selectedDate = ymd(d);
+      setCreating({ start: selectedDate, end: selectedDate });
+      notifySelectionToWebhook(selectedDate, selectedDate);
     }
   }
 
