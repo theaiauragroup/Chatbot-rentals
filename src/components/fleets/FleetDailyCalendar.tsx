@@ -11,6 +11,7 @@ interface FleetDailyCalendarProps {
   vehicles: Vehicle[];
   initialDate?: Date;
   hideControls?: boolean;
+  onAddSchedule?: (date: Date) => void;
 }
 
 function parseBlockDate(dateStr: string, timeStr?: string): Date {
@@ -27,7 +28,7 @@ function parseBlockEndDate(dateStr: string, timeStr?: string): Date {
   return new Date(y, m - 1, d, hours, minutes);
 }
 
-export function FleetDailyCalendar({ vehicles, initialDate, hideControls }: FleetDailyCalendarProps) {
+export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddSchedule }: FleetDailyCalendarProps) {
   const [currentDate, setCurrentDate] = React.useState<Date>(() => {
     if (initialDate) {
       const d = new Date(initialDate);
@@ -104,6 +105,11 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls }: Flee
             <h3 className="text-sm font-semibold text-fg">{dateLabel}</h3>
           </div>
           <div className="flex items-center gap-2">
+            {onAddSchedule && (
+              <Button variant="primary" size="sm" onClick={() => onAddSchedule(currentDate)} className="h-8 mr-2">
+                + Schedule
+              </Button>
+            )}
             <Button variant="secondary" size="sm" onClick={goToToday} className="h-8">
               Today
             </Button>

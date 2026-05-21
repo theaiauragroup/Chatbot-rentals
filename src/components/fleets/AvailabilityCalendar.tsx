@@ -49,6 +49,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
     end: string;
   } | null>(null);
   const [reason, setReason] = React.useState<BookingRange["reason"]>("blocked");
+  const [allDay, setAllDay] = React.useState(true);
   const [startTime, setStartTime] = React.useState("09:00");
   const [endTime, setEndTime] = React.useState("18:00");
 
@@ -127,8 +128,8 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
       id: `blk_${Date.now()}`,
       start: creating.start,
       end: creating.end,
-      startTime,
-      endTime,
+      startTime: allDay ? "00:00" : startTime,
+      endTime: allDay ? "23:59" : endTime,
       reason,
     };
     store.addBlock(vehicle.id, newBlock);
@@ -137,6 +138,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
     setCreating(null);
     setSelecting({ from: undefined, to: undefined });
     setReason("blocked");
+    setAllDay(true);
     setStartTime("09:00");
     setEndTime("18:00");
   }
@@ -145,13 +147,16 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
     setCreating(null);
     setSelecting({ from: undefined, to: undefined });
     setReason("blocked");
+    setAllDay(true);
     setStartTime("09:00");
     setEndTime("18:00");
   }
 
   return (
     <div>
-      <DayPicker
+      <div className="flex flex-col xl:flex-row gap-8 items-start">
+        <div className="shrink-0">
+          <DayPicker
         mode="range"
         numberOfMonths={2}
         month={month}
@@ -224,31 +229,19 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
           </li>
         </ul>
       </div>
-
-      {/* Hourly Report Modal */}
-      <Modal
-        open={!!viewingHourly}
-        onOpenChange={(o) => {
-          if (!o) setViewingHourly(null);
-        }}
-        title={`Hourly Report: ${vehicle.make} ${vehicle.model}`}
-        description={`Schedule for ${viewingHourly?.toLocaleString("default", { weekday: "long", month: "long", day: "numeric" })}`}
-        footer={
-          <Button variant="secondary" onClick={() => setViewingHourly(null)}>
-            Close
-          </Button>
-        }
-      >
-        <div className="pt-2">
-          {viewingHourly && (
-            <FleetDailyCalendar 
-              vehicles={[vehicle]} 
-              initialDate={viewingHourly} 
-              hideControls={true} 
-            />
-          )}
-        </div>
-      </Modal>
+      </div>
+      
+      <div className="flex-1 w-full min-w-0">
+        <FleetDailyCalendar 
+          vehicles={[vehicle]} 
+          initialDate={viewingHourly || undefined} 
+          onAddSchedule={(d) => {
+            setCreating({ start: ymd(d), end: ymd(d) });
+            setAllDay(false);
+          }}
+        />
+      </div>
+      </div>
 
       {/* Create modal */}
       <Modal
@@ -291,33 +284,45 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
             </select>
           </label>
 
+          <label className="flex items-center gap-2 cursor-pointer mt-2">
+            <input
+              type="checkbox"
+              checked={allDay}
+              onChange={(e) => setAllDay(e.target.checked)}
+              className="size-4 rounded-sm border border-border text-accent focus:ring-2 focus:ring-accent accent-accent"
+            />
+            <span className="text-xs font-medium text-fg">All day (00:00 - 23:59)</span>
+          </label>
+
           {/* Pickup + return time */}
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-fg">Pickup time</span>
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="h-9 px-3 rounded-sm border border-border bg-surface text-base text-fg outline-none focus:ring-2 focus:ring-accent tabular-nums"
-              />
-              <span className="text-[11px] text-fg-subtle">
-                On {creating ? formatDate(creating.start) : "—"}
-              </span>
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-fg">Return time</span>
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="h-9 px-3 rounded-sm border border-border bg-surface text-base text-fg outline-none focus:ring-2 focus:ring-accent tabular-nums"
-              />
-              <span className="text-[11px] text-fg-subtle">
-                On {creating ? formatDate(creating.end) : "—"}
-              </span>
-            </label>
-          </div>
+          {!allDay && (
+            <div className="grid grid-cols-2 gap-3 mt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs font-medium text-fg">Pickup time</span>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="h-9 px-3 rounded-sm border border-border bg-surface text-base text-fg outline-none focus:ring-2 focus:ring-accent tabular-nums"
+                />
+                <span className="text-[11px] text-fg-subtle">
+                  On {creating ? formatDate(creating.start) : "—"}
+                </span>
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs font-medium text-fg">Return time</span>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="h-9 px-3 rounded-sm border border-border bg-surface text-base text-fg outline-none focus:ring-2 focus:ring-accent tabular-nums"
+                />
+                <span className="text-[11px] text-fg-subtle">
+                  On {creating ? formatDate(creating.end) : "—"}
+                </span>
+              </label>
+            </div>
+          )}
           <p className="text-[11px] text-fg-subtle">
             Times are stored on the booking range and shown to customers when the bot quotes pickup / return.
           </p>
