@@ -18,6 +18,7 @@ import {
   Wrench,
   Lock,
   Check,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -37,6 +38,7 @@ import { CategoryBadge, VEHICLE_CATEGORY_LABEL } from "./CategoryBadge";
 import { VehicleStatusPill } from "@/components/leads/StatusPill";
 import { VehicleCard } from "./VehicleCard";
 import { FleetWeeklyCalendar } from "./FleetWeeklyCalendar";
+import { FleetDailyCalendar } from "./FleetDailyCalendar";
 import { useFleetStore } from "./FleetStore";
 import type {
   Vehicle,
@@ -75,7 +77,7 @@ export function FleetView() {
   const params = useSearchParams();
   const store = useFleetStore();
 
-  const view = (params.get("view") ?? "grid") as "grid" | "list" | "calendar";
+  const view = (params.get("view") ?? "grid") as "grid" | "list" | "calendar" | "daily";
   const category = (params.get("category") ?? "")
     .split(",")
     .filter(Boolean) as VehicleCategory[];
@@ -467,6 +469,7 @@ export function FleetView() {
               { value: "grid", label: "Grid", icon: <LayoutGrid className="size-3.5" /> },
               { value: "list", label: "List", icon: <Rows3 className="size-3.5" /> },
               { value: "calendar", label: "Weekly", icon: <Calendar className="size-3.5" /> },
+              { value: "daily", label: "Daily", icon: <Clock className="size-3.5" /> },
             ]}
           />
           <Button
@@ -545,6 +548,8 @@ export function FleetView() {
         </div>
       ) : view === "calendar" ? (
         <FleetWeeklyCalendar vehicles={visibleGrid} />
+      ) : view === "daily" ? (
+        <FleetDailyCalendar vehicles={visibleGrid} />
       ) : view === "grid" ? (
         gridSorted.length === 0 ? (
           <Card className="py-8">
