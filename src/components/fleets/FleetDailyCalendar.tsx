@@ -193,11 +193,14 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
                             <div 
                               onClick={() => onAddSchedule && onAddSchedule(currentDate, hour)}
                               className={cn(
-                                "w-full rounded flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100",
-                                onAddSchedule ? "cursor-pointer bg-surface border border-border hover:border-accent hover:bg-accent/5 hover:shadow-sm" : ""
+                                "w-full h-full min-h-[32px] rounded flex items-center justify-center transition-all duration-200 group/cell",
+                                onAddSchedule ? "cursor-pointer hover:bg-accent/5 hover:border-accent/20 border border-transparent" : ""
                               )}
                             >
-                              <span className="text-xs font-medium text-fg-muted group-hover:text-accent">
+                              <span className={cn(
+                                "text-xs font-medium transition-opacity",
+                                onAddSchedule ? "opacity-0 group-hover/cell:opacity-100 text-accent/80" : "opacity-0"
+                              )}>
                                 {onAddSchedule ? "+ Schedule" : "Available"}
                               </span>
                             </div>

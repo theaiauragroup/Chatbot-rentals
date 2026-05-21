@@ -153,9 +153,9 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-stretch">
       {/* Left: Month Calendar */}
-      <div className="flex flex-col items-center sm:items-start bg-surface border border-border p-6 rounded-lg w-full">
+      <div className="flex flex-col items-center sm:items-start bg-surface border border-border p-6 rounded-lg w-full h-full">
         <DayPicker
           mode="range"
           numberOfMonths={2}
@@ -210,7 +210,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
       />
 
       {/* Helper + legend */}
-      <div className="mt-3 flex items-center justify-between flex-wrap gap-2 text-[11px]">
+      <div className="mt-auto pt-4 flex items-center justify-between flex-wrap gap-2 text-[11px]">
         <p className="text-fg-subtle">
           Drag a range to schedule dates · Click an empty day for hourly report · Click existing schedule to edit
         </p>
@@ -231,7 +231,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
       </div>
       </div>
       {/* Right: Daily Calendar */}
-      <div className="w-full h-[480px]">
+      <div className="w-full h-full min-h-[400px]">
         <FleetDailyCalendar 
           vehicles={[vehicle]} 
           initialDate={viewingHourly || undefined} 
