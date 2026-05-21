@@ -96,7 +96,7 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
   };
 
   return (
-    <Card className="flex flex-col overflow-hidden bg-surface border border-border h-full">
+    <Card className="flex flex-col overflow-hidden bg-surface border border-border h-full shadow-sm rounded-xl">
       {/* Calendar Header / Controls */}
       {!hideControls && (
         <div className="flex items-center justify-between p-4 border-b border-border bg-surface-2/50 shrink-0">
@@ -113,7 +113,7 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
             <Button variant="secondary" size="sm" onClick={goToToday} className="h-8">
               Today
             </Button>
-            <div className="flex items-center rounded-md border border-border bg-surface overflow-hidden">
+            <div className="flex items-center rounded-md border border-border bg-surface overflow-hidden shadow-sm">
               <button
                 onClick={prevDay}
                 className="p-1.5 hover:bg-surface-2 text-fg-muted hover:text-fg transition-colors"
@@ -134,28 +134,28 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
         </div>
       )}
 
-      <div className="overflow-y-auto flex-1 min-h-[300px] max-h-[600px]">
+      <div className="overflow-y-auto flex-1 min-h-0">
         <div className="min-w-0">
           {/* Header Row */}
-          <div className="flex border-b border-border bg-surface-2/30 sticky top-0 z-10">
+          <div className="flex border-b border-border bg-surface-2/30 sticky top-0 z-10 backdrop-blur-sm">
             <div className="w-[80px] p-3 text-xs font-medium text-fg-muted flex items-center justify-center border-r border-border shrink-0">
               Time
             </div>
             {vehicles.map(v => (
-              <div key={v.id} className="flex-1 p-3 flex items-center gap-2 border-r border-border last:border-0 min-w-[120px]">
-                <div className="size-6 rounded bg-surface-2 flex items-center justify-center text-fg-subtle shrink-0">
-                  <Car className="size-3" />
+              <div key={v.id} className="flex-1 p-3 flex items-center gap-3 border-r border-border last:border-0 min-w-[200px]">
+                <div className="size-8 rounded-md bg-surface-2 flex items-center justify-center text-fg-subtle shrink-0">
+                  <Car className="size-4" />
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-medium text-fg truncate">{v.make} {v.model}</span>
-                  <span className="text-[10px] text-fg-subtle truncate">{v.plate}</span>
+                  <span className="text-sm font-semibold text-fg truncate">{v.make} {v.model}</span>
+                  <span className="text-xs text-fg-subtle truncate">{v.plate || "No plate set"}</span>
                 </div>
               </div>
             ))}
           </div>
 
           {/* Grid Body */}
-          <div className="flex flex-col">
+          <div className="flex flex-col pb-4">
             {vehicles.length === 0 ? (
               <div className="p-8 text-center text-sm text-fg-muted">
                 No vehicles available.
@@ -165,10 +165,10 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
                 const now = new Date();
                 const isCurrentHour = currentDate.toDateString() === now.toDateString() && hour === now.getHours();
                 return (
-                  <div key={hour} className="flex border-b border-border last:border-0 hover:bg-surface-2/10 transition-colors">
+                  <div key={hour} className="flex border-b border-border/50 last:border-0 hover:bg-surface-2/30 transition-colors group">
                     {/* Time Cell */}
                     <div className={cn("w-[80px] p-2 flex flex-col items-center justify-center border-r border-border shrink-0", isCurrentHour ? "bg-accent/5" : "")}>
-                      <span className={cn("text-xs font-medium whitespace-nowrap", isCurrentHour ? "text-accent" : "text-fg-subtle")}>
+                      <span className={cn("text-xs font-medium whitespace-nowrap", isCurrentHour ? "text-accent" : "text-fg-subtle group-hover:text-fg")}>
                         {getHourLabel(hour)}
                       </span>
                     </div>
@@ -181,23 +181,23 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
                         <div
                           key={v.id}
                           className={cn(
-                            "flex-1 p-1.5 flex items-stretch border-r border-border last:border-0 min-w-[120px]",
+                            "flex-1 p-1.5 flex items-stretch border-r border-border last:border-0 min-w-[200px]",
                             isCurrentHour && !blocked ? "bg-accent/5" : ""
                           )}
                         >
                           {blocked ? (
-                            <div className="w-full rounded-sm bg-red-500/10 border border-red-500/20 flex flex-col items-center justify-center py-1">
+                            <div className="w-full rounded bg-red-500/10 border border-red-500/20 flex flex-col items-center justify-center py-2 shadow-sm">
                                <span className="text-xs font-semibold text-red-600 tracking-wide">Rented</span>
                             </div>
                           ) : (
                             <div 
                               onClick={() => onAddSchedule && onAddSchedule(currentDate, hour)}
                               className={cn(
-                                "w-full rounded-sm bg-green-500/5 border border-green-500/10 border-dashed flex items-center justify-center transition-colors",
-                                onAddSchedule ? "cursor-pointer hover:bg-green-500/15 hover:border-green-500/30" : ""
+                                "w-full rounded flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100",
+                                onAddSchedule ? "cursor-pointer bg-surface border border-border hover:border-accent hover:bg-accent/5 hover:shadow-sm" : ""
                               )}
                             >
-                              <span className="text-xs font-medium text-green-600/70">
+                              <span className="text-xs font-medium text-fg-muted group-hover:text-accent">
                                 {onAddSchedule ? "+ Schedule" : "Available"}
                               </span>
                             </div>

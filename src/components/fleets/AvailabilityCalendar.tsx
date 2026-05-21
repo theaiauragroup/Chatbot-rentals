@@ -153,14 +153,14 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
   }
 
   return (
-    <div>
-      <div className="flex flex-col xl:flex-row gap-8 items-start">
-        <div className="shrink-0">
-          <DayPicker
-        mode="range"
-        numberOfMonths={2}
-        month={month}
-        onMonthChange={setMonth}
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
+      {/* Left: Month Calendar */}
+      <div className="flex flex-col items-center sm:items-start bg-surface border border-border p-6 rounded-lg w-full">
+        <DayPicker
+          mode="range"
+          numberOfMonths={2}
+          month={month}
+          onMonthChange={setMonth}
         selected={selecting}
         onSelect={handleSelect}
         onDayClick={handleDayClick}
@@ -230,8 +230,8 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
         </ul>
       </div>
       </div>
-      
-      <div className="flex-1 w-full min-w-0">
+      {/* Right: Daily Calendar */}
+      <div className="w-full h-[480px]">
         <FleetDailyCalendar 
           vehicles={[vehicle]} 
           initialDate={viewingHourly || undefined} 
@@ -247,8 +247,6 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
           }}
         />
       </div>
-      </div>
-
       {/* Create modal */}
       <Modal
         open={!!creating}
