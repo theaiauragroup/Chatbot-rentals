@@ -198,7 +198,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
 
   return (
     <div>
-      <div className="flex flex-col xl:flex-row gap-8 items-stretch">
+      <div className="flex flex-col xl:flex-row gap-8 items-start">
         <div className="shrink-0 flex flex-col">
         <DayPicker
           mode="range"
@@ -275,7 +275,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
       </div>
       </div>
       
-      <div className="flex-1 w-full min-w-0 self-stretch flex flex-col">
+      <div className="flex-1 min-w-0">
         <FleetDailyCalendar 
           vehicles={[vehicle]} 
           initialDate={viewingHourly || undefined}
