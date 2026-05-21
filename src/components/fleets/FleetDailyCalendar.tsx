@@ -117,7 +117,7 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
   };
 
   return (
-    <Card className="flex flex-col overflow-hidden bg-surface border border-border shadow-sm rounded-xl max-h-[420px]">
+    <Card className="flex flex-col overflow-hidden bg-surface border border-border h-full shadow-sm rounded-xl">
       {/* Calendar Header / Controls */}
       {!hideControls && (
         <div className="flex items-center justify-between p-4 border-b border-border bg-surface-2/50 shrink-0">
@@ -155,7 +155,7 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
         </div>
       )}
 
-      <div ref={scrollContainerRef} className="overflow-y-auto flex-1">
+      <div ref={scrollContainerRef} className="overflow-y-auto overflow-x-hidden flex-1">
         <div className="min-w-0">
           {/* Header Row */}
           <div className="flex border-b border-border bg-surface-2/30 sticky top-0 z-10 backdrop-blur-sm">
@@ -163,7 +163,7 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
               Time
             </div>
             {vehicles.map(v => (
-              <div key={v.id} className="flex-1 p-3 flex items-center gap-3 border-r border-border last:border-0 min-w-[200px]">
+              <div key={v.id} className="flex-1 p-3 flex items-center gap-3 border-r border-border last:border-0">
                 <div className="size-8 rounded-md bg-surface-2 flex items-center justify-center text-fg-subtle shrink-0">
                   <Car className="size-4" />
                 </div>
@@ -214,7 +214,7 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
                         <div
                           key={v.id}
                           className={cn(
-                            "flex-1 p-1.5 flex items-stretch border-r border-border last:border-0 min-w-[200px]",
+                            "flex-1 p-1.5 flex items-stretch border-r border-border last:border-0",
                             isCurrentHour && !blocked ? "bg-accent/5" : "",
                             isSelected && !blocked ? "bg-green-500/10" : ""
                           )}
