@@ -155,7 +155,7 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
         </div>
       )}
 
-      <div ref={scrollContainerRef} className="overflow-y-auto flex-1" style={{ minHeight: '520px', maxHeight: '520px' }}>
+      <div ref={scrollContainerRef} className="overflow-y-auto flex-1">
         <div className="min-w-0">
           {/* Header Row */}
           <div className="flex border-b border-border bg-surface-2/30 sticky top-0 z-10 backdrop-blur-sm">
