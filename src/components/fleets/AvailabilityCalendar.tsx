@@ -152,101 +152,103 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
     setEndTime("18:00");
   }
 
+  return (
     <div>
       <div className="flex flex-col xl:flex-row gap-8 items-start">
         <div className="shrink-0">
-        <DayPicker
-          mode="range"
-          numberOfMonths={2}
-          month={month}
-          onMonthChange={setMonth}
-        selected={selecting}
-        onSelect={handleSelect}
-        onDayClick={handleDayClick}
-        showOutsideDays
-        modifiers={{
-          rented: rentedDays,
-          maintenance: maintenanceDays,
-          blocked: blockedDays,
-          today: [today],
-        }}
-        modifiersClassNames={{
-          rented:
-            "bg-accent-soft text-accent font-medium hover:bg-accent-soft hover:text-accent",
-          maintenance:
-            "bg-warm-soft text-warning font-medium hover:bg-warm-soft hover:text-warning",
-          blocked:
-            "bg-surface-2 text-fg-muted font-medium hover:bg-surface-2",
-          today: "ring-1 ring-accent ring-inset rounded-md",
-          selected: "bg-accent text-accent-fg hover:bg-accent",
-        }}
-        components={{
-          Chevron: ({ orientation }) =>
-            orientation === "left" ? (
-              <ChevronLeft className="size-4" aria-hidden />
-            ) : (
-              <ChevronRight className="size-4" aria-hidden />
-            ),
-        }}
-        classNames={{
-          months: "flex gap-6",
-          month: "flex flex-col gap-2",
-          caption_label: "text-sm font-medium text-fg",
-          nav: "flex items-center gap-1",
-          button_next:
-            "size-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors",
-          button_previous:
-            "size-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors",
-          weekdays: "grid grid-cols-7",
-          weekday: "size-9 text-[11px] font-medium text-fg-subtle",
-          week: "grid grid-cols-7 gap-y-0.5",
-          day: "size-9 inline-flex items-center justify-center text-xs text-fg hover:bg-surface-2 rounded-md cursor-pointer",
-          day_button:
-            "size-9 inline-flex items-center justify-center text-xs rounded-md outline-none focus-visible:ring-2 focus-visible:ring-accent",
-          outside: "text-fg-subtle/60",
-          disabled: "opacity-30 cursor-not-allowed",
-        }}
-      />
+          <DayPicker
+            mode="range"
+            numberOfMonths={2}
+            month={month}
+            onMonthChange={setMonth}
+            selected={selecting}
+            onSelect={handleSelect}
+            onDayClick={handleDayClick}
+            showOutsideDays
+            modifiers={{
+              rented: rentedDays,
+              maintenance: maintenanceDays,
+              blocked: blockedDays,
+              today: [today],
+            }}
+            modifiersClassNames={{
+              rented:
+                "bg-accent-soft text-accent font-medium hover:bg-accent-soft hover:text-accent",
+              maintenance:
+                "bg-warm-soft text-warning font-medium hover:bg-warm-soft hover:text-warning",
+              blocked:
+                "bg-surface-2 text-fg-muted font-medium hover:bg-surface-2",
+              today: "ring-1 ring-accent ring-inset rounded-md",
+              selected: "bg-accent text-accent-fg hover:bg-accent",
+            }}
+            components={{
+              Chevron: ({ orientation }) =>
+                orientation === "left" ? (
+                  <ChevronLeft className="size-4" aria-hidden />
+                ) : (
+                  <ChevronRight className="size-4" aria-hidden />
+                ),
+            }}
+            classNames={{
+              months: "flex gap-6",
+              month: "flex flex-col gap-2",
+              caption_label: "text-sm font-medium text-fg",
+              nav: "flex items-center gap-1",
+              button_next:
+                "size-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors",
+              button_previous:
+                "size-7 inline-flex items-center justify-center rounded-md text-fg-muted hover:bg-surface-2 hover:text-fg transition-colors",
+              weekdays: "grid grid-cols-7",
+              weekday: "size-9 text-[11px] font-medium text-fg-subtle",
+              week: "grid grid-cols-7 gap-y-0.5",
+              day: "size-9 inline-flex items-center justify-center text-xs text-fg hover:bg-surface-2 rounded-md cursor-pointer",
+              day_button:
+                "size-9 inline-flex items-center justify-center text-xs rounded-md outline-none focus-visible:ring-2 focus-visible:ring-accent",
+              outside: "text-fg-subtle/60",
+              disabled: "opacity-30 cursor-not-allowed",
+            }}
+          />
 
-      {/* Helper + legend */}
-      <div className="mt-3 flex items-center justify-between flex-wrap gap-2 text-[11px]">
-        <p className="text-fg-subtle">
-          Drag a range to schedule dates · Click an empty day for hourly report · Click existing schedule to edit
-        </p>
-        <ul className="flex items-center gap-3 text-fg-muted">
-          <li className="inline-flex items-center gap-1.5">
-            <span aria-hidden className="size-2 rounded-sm bg-accent-soft" />
-            Rented
-          </li>
-          <li className="inline-flex items-center gap-1.5">
-            <span aria-hidden className="size-2 rounded-sm bg-warm-soft" />
-            Maintenance
-          </li>
-          <li className="inline-flex items-center gap-1.5">
-            <span aria-hidden className="size-2 rounded-sm bg-surface-2" />
-            Scheduled
-          </li>
-        </ul>
+          {/* Helper + legend */}
+          <div className="mt-3 flex items-center justify-between flex-wrap gap-2 text-[11px]">
+            <p className="text-fg-subtle">
+              Drag a range to schedule dates · Click an empty day for hourly report · Click existing schedule to edit
+            </p>
+            <ul className="flex items-center gap-3 text-fg-muted">
+              <li className="inline-flex items-center gap-1.5">
+                <span aria-hidden className="size-2 rounded-sm bg-accent-soft" />
+                Rented
+              </li>
+              <li className="inline-flex items-center gap-1.5">
+                <span aria-hidden className="size-2 rounded-sm bg-warm-soft" />
+                Maintenance
+              </li>
+              <li className="inline-flex items-center gap-1.5">
+                <span aria-hidden className="size-2 rounded-sm bg-surface-2" />
+                Scheduled
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="flex-1 w-full min-w-0">
+          <FleetDailyCalendar
+            vehicles={[vehicle]}
+            initialDate={viewingHourly || undefined}
+            onAddSchedule={(d, hour) => {
+              setCreating({ start: ymd(d), end: ymd(d) });
+              if (hour !== undefined) {
+                setAllDay(false);
+                setStartTime(`${hour.toString().padStart(2, "0")}:00`);
+                setEndTime(`${hour.toString().padStart(2, "0")}:59`);
+              } else {
+                setAllDay(true);
+              }
+            }}
+          />
+        </div>
       </div>
-      </div>
-      
-      <div className="flex-1 w-full min-w-0">
-        <FleetDailyCalendar 
-          vehicles={[vehicle]} 
-          initialDate={viewingHourly || undefined} 
-          onAddSchedule={(d, hour) => {
-            setCreating({ start: ymd(d), end: ymd(d) });
-            if (hour !== undefined) {
-              setAllDay(false);
-              setStartTime(`${hour.toString().padStart(2, '0')}:00`);
-              setEndTime(`${hour.toString().padStart(2, '0')}:59`);
-            } else {
-              setAllDay(true);
-            }
-          }}
-        />
-      </div>
-      </div>
+
       {/* Create modal */}
       <Modal
         open={!!creating}
