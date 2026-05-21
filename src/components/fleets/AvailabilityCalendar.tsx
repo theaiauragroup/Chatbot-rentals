@@ -235,9 +235,15 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
         <FleetDailyCalendar 
           vehicles={[vehicle]} 
           initialDate={viewingHourly || undefined} 
-          onAddSchedule={(d) => {
+          onAddSchedule={(d, hour) => {
             setCreating({ start: ymd(d), end: ymd(d) });
-            setAllDay(false);
+            if (hour !== undefined) {
+              setAllDay(false);
+              setStartTime(`${hour.toString().padStart(2, '0')}:00`);
+              setEndTime(`${hour.toString().padStart(2, '0')}:59`);
+            } else {
+              setAllDay(true);
+            }
           }}
         />
       </div>
