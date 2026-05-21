@@ -274,7 +274,10 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
           return (
             <div className="rounded-xl border border-border bg-surface p-6 flex flex-col h-full">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-sm font-semibold text-fg">Daily Overview</h3>
+                <div>
+                  <h3 className="text-sm font-semibold text-fg">{vehicle.make} {vehicle.model}</h3>
+                  <p className="text-xs text-fg-muted mt-0.5">Daily Overview</p>
+                </div>
                 <span className="text-xs font-medium text-fg-muted bg-surface-2 px-2 py-1 rounded-md">
                   {viewingHourly ? formatDate(ymd(viewingHourly)) : formatDate(ymd(today))}
                 </span>
