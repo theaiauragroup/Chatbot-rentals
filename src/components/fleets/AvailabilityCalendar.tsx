@@ -42,7 +42,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
     from: Date | undefined;
     to: Date | undefined;
   }>({ from: undefined, to: undefined });
-  const [viewingHourly, setViewingHourly] = React.useState<Date | null>(null);
+  const [viewingHourly, setViewingHourly] = React.useState<Date | null>(today); // Show today by default
   const [editingBlock, setEditingBlock] = React.useState<BookingRange | null>(null);
   const [creating, setCreating] = React.useState<{
     start: string;
@@ -83,14 +83,16 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
     if (!range) return;
     setSelecting({ from: range.from, to: range.to });
     if (range.from && range.to && range.from.getTime() !== range.to.getTime()) {
-      // Multi-day range selection - just open modal
+      // Multi-day range selection - show first date in hourly view
       const startDate = ymd(range.from);
       const endDate = ymd(range.to);
       setCreating({ start: startDate, end: endDate });
+      setViewingHourly(range.from); // Show start date in hourly section
     } else if (range.from && range.to && range.from.getTime() === range.to.getTime()) {
-      // Single day selected - just open modal
+      // Single day selected - show in hourly view
       const selectedDate = ymd(range.from);
       setCreating({ start: selectedDate, end: selectedDate });
+      setViewingHourly(range.from); // Show this date in hourly section
     } else if (range.from && !range.to) {
       // Single click - open hourly view
       setViewingHourly(range.from);
@@ -103,9 +105,10 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
     if (block) {
       setEditingBlock(block);
     } else {
-      // Single click on empty day - open modal (no webhook yet!)
+      // Single click on empty day - open modal and show in hourly view
       const selectedDate = ymd(d);
       setCreating({ start: selectedDate, end: selectedDate });
+      setViewingHourly(d); // Show this date in hourly section
     }
   }
 
@@ -261,21 +264,15 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
           selectedHours={creating && !allDay ? selectedHours : null}
           onAddSchedule={(d, hour) => {
             const selectedDate = ymd(d);
-            
-            // Update all relevant states to sync calendar and hourly views
             setCreating({ start: selectedDate, end: selectedDate });
-            setViewingHourly(d); // Show this date in hourly view
-            setSelecting({ from: d, to: d }); // Highlight in calendar section
             
             if (hour !== undefined) {
-              // Clicked specific hour - set time-specific booking
               setAllDay(false);
               const calculatedStartTime = `${hour.toString().padStart(2, '0')}:00`;
               const calculatedEndTime = `${hour.toString().padStart(2, '0')}:59`;
               setStartTime(calculatedStartTime);
               setEndTime(calculatedEndTime);
             } else {
-              // Clicked "+ Schedule" button - set all-day booking
               setAllDay(true);
               setStartTime("00:00");
               setEndTime("23:59");
