@@ -204,7 +204,7 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
                 const isSelected = selectedHours && hour >= selectedHours.startHour && hour <= selectedHours.endHour;
                 
                 return (
-                  <div key={hour} className="flex border-b border-border/50 last:border-0 hover:bg-surface-2/30 transition-colors group">
+                  <div key={hour} className="flex border-b border-border/50 last:border-0 hover:bg-surface-2/30 transition-colors group relative">
                     {/* Time Cell */}
                     <div className={cn(
                       "w-[80px] p-2 flex flex-col items-center justify-center border-r border-border shrink-0",
@@ -227,34 +227,61 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
                       const blocked = isBlocked(v, hour);
                       const block = getBlockForHour(v, hour);
                       
+                      // Check if this is the start of a block
+                      const isBlockStart = block && (() => {
+                        const blockStartTime = block.startTime ? parseInt(block.startTime.split(':')[0]) : 0;
+                        return hour === blockStartTime;
+                      })();
+                      
+                      // Calculate block span (how many hours this block covers)
+                      const blockSpan = block && isBlockStart ? (() => {
+                        const startHour = block.startTime ? parseInt(block.startTime.split(':')[0]) : 0;
+                        const endHour = block.endTime ? parseInt(block.endTime.split(':')[0]) : 23;
+                        return endHour - startHour + 1;
+                      })() : 0;
+                      
                       return (
                         <div
                           key={v.id}
                           className={cn(
-                            "flex-1 p-1.5 flex items-stretch border-r border-border last:border-0",
+                            "flex-1 p-1.5 flex items-stretch border-r border-border last:border-0 relative",
                             isCurrentHour && !blocked ? "bg-accent/5" : "",
                             isSelected && !blocked ? "bg-green-500/10" : ""
                           )}
                         >
-                          {blocked && block ? (
-                            <div className={cn(
-                              "w-full rounded border flex flex-col items-center justify-center py-2 shadow-sm",
-                              block.reason === "rented" ? "bg-red-500/10 border-red-500/30" : 
-                              block.reason === "maintenance" ? "bg-yellow-500/10 border-yellow-500/30" : 
-                              "bg-blue-500/10 border-blue-500/30"
-                            )}>
-                               <span className={cn(
-                                 "text-xs font-semibold tracking-wide",
-                                 block.reason === "rented" ? "text-red-600" : 
-                                 block.reason === "maintenance" ? "text-yellow-600" : 
-                                 "text-blue-600"
-                               )}>
-                                 {block.reason === "rented" ? "Rented" : 
-                                  block.reason === "maintenance" ? "Maintenance" : 
-                                  "Scheduled"}
-                               </span>
+                          {blocked && block && isBlockStart ? (
+                            // Badge spanning multiple hours like Google Calendar
+                            <div 
+                              className={cn(
+                                "absolute left-1.5 right-1.5 rounded-md px-3 py-1.5 shadow-sm flex items-center justify-between z-10",
+                                block.reason === "rented" ? "bg-red-500 text-white" : 
+                                block.reason === "maintenance" ? "bg-yellow-500 text-white" : 
+                                "bg-blue-500 text-white"
+                              )}
+                              style={{
+                                height: `${blockSpan * 40}px`, // Height spans multiple hours
+                                top: '6px'
+                              }}
+                            >
+                              <div className="flex flex-col justify-center min-w-0 flex-1">
+                                <span className="text-xs font-semibold truncate">
+                                  {v.make} {v.model}
+                                </span>
+                                <span className="text-[10px] opacity-90 truncate">
+                                  {block.startTime || "00:00"} - {block.endTime || "23:59"}
+                                </span>
+                                <span className="text-[10px] opacity-75 truncate">
+                                  {block.reason === "rented" ? "Rented" : 
+                                   block.reason === "maintenance" ? "Maintenance" : 
+                                   "Scheduled"}
+                                </span>
+                              </div>
                             </div>
+                          ) : blocked && !isBlockStart ? (
+                            // Empty space for continuation of block
+                            <div className="w-full h-full" />
                           ) : (
+                            // Available slot
                             <div 
                               onClick={() => onAddSchedule && onAddSchedule(currentDate, hour)}
                               className={cn(
