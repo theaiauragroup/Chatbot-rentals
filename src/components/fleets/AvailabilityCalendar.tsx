@@ -79,57 +79,22 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
     return vehicle.blocks.find((b) => t >= b.start && t <= b.end);
   }
 
-  async function notifySelectionToWebhook(start: string, end: string, startTime?: string, endTime?: string) {
-    try {
-      await fetch("/api/calender", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "selection",
-          "Car ID": vehicle.id,
-          "Vehicle ID": vehicle.id,
-          "Make": vehicle.make,
-          "Model": vehicle.model,
-          "Plate": vehicle.plate,
-          "Start Date": start,
-          "End Date": end,
-          "Start Time": startTime || "00:00",
-          "End Time": endTime || "23:59",
-          "Selection Type": startTime && endTime ? "time-specific" : "all-day",
-          "Date Range": `${start} to ${end}`,
-          "Time Range": startTime && endTime ? `${startTime} to ${endTime}` : "All day",
-          timestamp: new Date().toISOString(),
-        }),
-      });
-    } catch (error) {
-      console.error("Failed to notify webhook of selection:", error);
-    }
-  }
-
   function handleSelect(range: { from?: Date; to?: Date } | undefined) {
     if (!range) return;
     setSelecting({ from: range.from, to: range.to });
     if (range.from && range.to && range.from.getTime() !== range.to.getTime()) {
-      // Multi-day range selection
+      // Multi-day range selection - just open modal
       const startDate = ymd(range.from);
       const endDate = ymd(range.to);
       setCreating({ start: startDate, end: endDate });
-      // Notify webhook of date range selection
-      notifySelectionToWebhook(startDate, endDate);
     } else if (range.from && range.to && range.from.getTime() === range.to.getTime()) {
-      // Single day selected with both from and to (same day)
+      // Single day selected - just open modal
       const selectedDate = ymd(range.from);
       setCreating({ start: selectedDate, end: selectedDate });
-      // Notify webhook of single day selection
-      notifySelectionToWebhook(selectedDate, selectedDate);
     } else if (range.from && !range.to) {
-      // Single click - could be start of range OR single day intent
-      // Open hourly view for detailed scheduling
+      // Single click - open hourly view
       setViewingHourly(range.from);
       setSelecting({ from: undefined, to: undefined });
-      // Notify webhook of single day selection
-      const selectedDate = ymd(range.from);
-      notifySelectionToWebhook(selectedDate, selectedDate);
     }
   }
 
@@ -138,10 +103,9 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
     if (block) {
       setEditingBlock(block);
     } else {
-      // Single click on empty day - open scheduling modal immediately
+      // Single click on empty day - open modal (no webhook yet!)
       const selectedDate = ymd(d);
       setCreating({ start: selectedDate, end: selectedDate });
-      notifySelectionToWebhook(selectedDate, selectedDate);
     }
   }
 
@@ -304,12 +268,8 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
               const calculatedEndTime = `${hour.toString().padStart(2, '0')}:59`;
               setStartTime(calculatedStartTime);
               setEndTime(calculatedEndTime);
-              // Notify webhook of specific hour selection
-              notifySelectionToWebhook(selectedDate, selectedDate, calculatedStartTime, calculatedEndTime);
             } else {
               setAllDay(true);
-              // Notify webhook of all-day selection
-              notifySelectionToWebhook(selectedDate, selectedDate);
             }
           }}
         />
@@ -363,13 +323,12 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
               onChange={(e) => {
                 const isAllDay = e.target.checked;
                 setAllDay(isAllDay);
-                // Notify webhook when all-day is toggled
-                if (creating) {
-                  if (isAllDay) {
-                    notifySelectionToWebhook(creating.start, creating.end);
-                  } else {
-                    notifySelectionToWebhook(creating.start, creating.end, startTime, endTime);
-                  }
+                if (isAllDay) {
+                  setStartTime("00:00");
+                  setEndTime("23:59");
+                } else {
+                  setStartTime("09:00");
+                  setEndTime("18:00");
                 }
               }}
               className="size-4 rounded-sm border border-border text-accent focus:ring-2 focus:ring-accent accent-accent"
@@ -385,14 +344,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
                 <input
                   type="time"
                   value={startTime}
-                  onChange={(e) => {
-                    const newStartTime = e.target.value;
-                    setStartTime(newStartTime);
-                    // Notify webhook when start time changes
-                    if (creating) {
-                      notifySelectionToWebhook(creating.start, creating.end, newStartTime, endTime);
-                    }
-                  }}
+                  onChange={(e) => setStartTime(e.target.value)}
                   className="h-9 px-3 rounded-sm border border-border bg-surface text-base text-fg outline-none focus:ring-2 focus:ring-accent tabular-nums"
                 />
                 <span className="text-[11px] text-fg-subtle">
@@ -404,14 +356,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
                 <input
                   type="time"
                   value={endTime}
-                  onChange={(e) => {
-                    const newEndTime = e.target.value;
-                    setEndTime(newEndTime);
-                    // Notify webhook when end time changes
-                    if (creating) {
-                      notifySelectionToWebhook(creating.start, creating.end, startTime, newEndTime);
-                    }
-                  }}
+                  onChange={(e) => setEndTime(e.target.value)}
                   className="h-9 px-3 rounded-sm border border-border bg-surface text-base text-fg outline-none focus:ring-2 focus:ring-accent tabular-nums"
                 />
                 <span className="text-[11px] text-fg-subtle">
