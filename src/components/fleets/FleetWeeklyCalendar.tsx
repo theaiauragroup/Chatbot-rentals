@@ -183,7 +183,6 @@ export function FleetWeeklyCalendar({ vehicles }: FleetWeeklyCalendarProps) {
         }}
         title={`Hourly Report: ${viewingHourly?.vehicle.make} ${viewingHourly?.vehicle.model}`}
         description={`Schedule for ${viewingHourly?.date.toLocaleString("default", { weekday: "long", month: "long", day: "numeric" })}`}
-        width="lg"
         footer={
           <Button variant="secondary" onClick={() => setViewingHourly(null)}>
             Close

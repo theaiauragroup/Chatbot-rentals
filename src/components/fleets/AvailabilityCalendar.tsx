@@ -233,7 +233,6 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
         }}
         title={`Hourly Report: ${vehicle.make} ${vehicle.model}`}
         description={`Schedule for ${viewingHourly?.toLocaleString("default", { weekday: "long", month: "long", day: "numeric" })}`}
-        width="lg"
         footer={
           <Button variant="secondary" onClick={() => setViewingHourly(null)}>
             Close
