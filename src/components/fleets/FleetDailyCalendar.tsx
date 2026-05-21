@@ -110,6 +110,22 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
     });
   };
 
+  const getBlockForHour = (vehicle: Vehicle, hour: number) => {
+    if (!vehicle.blocks || vehicle.blocks.length === 0) return null;
+    
+    const hourStart = new Date(currentDate);
+    hourStart.setHours(hour, 0, 0, 0);
+    
+    const hourEnd = new Date(currentDate);
+    hourEnd.setHours(hour, 59, 59, 999);
+
+    return vehicle.blocks.find((block) => {
+      const blockStart = parseBlockDate(block.start, block.startTime);
+      const blockEnd = parseBlockEndDate(block.end, block.endTime);
+      return hourStart <= blockEnd && hourEnd >= blockStart;
+    }) || null;
+  };
+
   const getHourLabel = (hour: number) => {
     const period = hour >= 12 ? "PM" : "AM";
     const displayHour = hour % 12 || 12;
@@ -209,6 +225,7 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
                     {/* Vehicle Cells */}
                     {vehicles.map((v) => {
                       const blocked = isBlocked(v, hour);
+                      const block = getBlockForHour(v, hour);
                       
                       return (
                         <div
@@ -219,9 +236,23 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
                             isSelected && !blocked ? "bg-green-500/10" : ""
                           )}
                         >
-                          {blocked ? (
-                            <div className="w-full rounded bg-red-500/10 border border-red-500/20 flex flex-col items-center justify-center py-2 shadow-sm">
-                               <span className="text-xs font-semibold text-red-600 tracking-wide">Rented</span>
+                          {blocked && block ? (
+                            <div className={cn(
+                              "w-full rounded border flex flex-col items-center justify-center py-2 shadow-sm",
+                              block.reason === "rented" ? "bg-red-500/10 border-red-500/30" : 
+                              block.reason === "maintenance" ? "bg-yellow-500/10 border-yellow-500/30" : 
+                              "bg-blue-500/10 border-blue-500/30"
+                            )}>
+                               <span className={cn(
+                                 "text-xs font-semibold tracking-wide",
+                                 block.reason === "rented" ? "text-red-600" : 
+                                 block.reason === "maintenance" ? "text-yellow-600" : 
+                                 "text-blue-600"
+                               )}>
+                                 {block.reason === "rented" ? "Rented" : 
+                                  block.reason === "maintenance" ? "Maintenance" : 
+                                  "Scheduled"}
+                               </span>
                             </div>
                           ) : (
                             <div 
