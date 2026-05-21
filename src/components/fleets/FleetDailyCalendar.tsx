@@ -134,7 +134,7 @@ export function FleetDailyCalendar({ vehicles, initialDate, hideControls, onAddS
         </div>
       )}
 
-      <div className="overflow-y-auto flex-1 min-h-0">
+      <div className="overflow-y-auto flex-1 min-h-[300px] max-h-[440px]">
         <div className="min-w-0">
           {/* Header Row */}
           <div className="flex border-b border-border bg-surface-2/30 sticky top-0 z-10 backdrop-blur-sm">
