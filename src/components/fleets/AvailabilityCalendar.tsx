@@ -261,15 +261,24 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
           selectedHours={creating && !allDay ? selectedHours : null}
           onAddSchedule={(d, hour) => {
             const selectedDate = ymd(d);
+            
+            // Update all relevant states to sync calendar and hourly views
             setCreating({ start: selectedDate, end: selectedDate });
+            setViewingHourly(d); // Show this date in hourly view
+            setSelecting({ from: d, to: d }); // Highlight in calendar section
+            
             if (hour !== undefined) {
+              // Clicked specific hour - set time-specific booking
               setAllDay(false);
               const calculatedStartTime = `${hour.toString().padStart(2, '0')}:00`;
               const calculatedEndTime = `${hour.toString().padStart(2, '0')}:59`;
               setStartTime(calculatedStartTime);
               setEndTime(calculatedEndTime);
             } else {
+              // Clicked "+ Schedule" button - set all-day booking
               setAllDay(true);
+              setStartTime("00:00");
+              setEndTime("23:59");
             }
           }}
         />
