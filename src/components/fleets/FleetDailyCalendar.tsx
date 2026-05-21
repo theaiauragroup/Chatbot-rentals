@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 
 interface FleetDailyCalendarProps {
   vehicles: Vehicle[];
+  initialDate?: Date;
+  hideControls?: boolean;
 }
 
 function parseBlockDate(dateStr: string, timeStr?: string): Date {
@@ -25,20 +27,43 @@ function parseBlockEndDate(dateStr: string, timeStr?: string): Date {
   return new Date(y, m - 1, d, hours, minutes);
 }
 
-export function FleetDailyCalendar({ vehicles }: FleetDailyCalendarProps) {
-  const [dayOffset, setDayOffset] = React.useState(0);
+export function FleetDailyCalendar({ vehicles, initialDate, hideControls }: FleetDailyCalendarProps) {
+  const [currentDate, setCurrentDate] = React.useState<Date>(() => {
+    if (initialDate) {
+      const d = new Date(initialDate);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const currentDate = new Date(today);
-  currentDate.setDate(today.getDate() + dayOffset);
+  React.useEffect(() => {
+    if (initialDate) {
+      const d = new Date(initialDate);
+      d.setHours(0, 0, 0, 0);
+      setCurrentDate(d);
+    }
+  }, [initialDate]);
 
   const hoursOfDay = Array.from({ length: 24 }).map((_, i) => i);
 
-  const nextDay = () => setDayOffset(prev => prev + 1);
-  const prevDay = () => setDayOffset(prev => prev - 1);
-  const goToToday = () => setDayOffset(0);
+  const nextDay = () => setCurrentDate(prev => {
+    const d = new Date(prev);
+    d.setDate(d.getDate() + 1);
+    return d;
+  });
+  const prevDay = () => setCurrentDate(prev => {
+    const d = new Date(prev);
+    d.setDate(d.getDate() - 1);
+    return d;
+  });
+  const goToToday = () => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    setCurrentDate(d);
+  };
 
   const dateLabel = currentDate.toLocaleString("default", { 
     weekday: "long", 
@@ -72,34 +97,36 @@ export function FleetDailyCalendar({ vehicles }: FleetDailyCalendarProps) {
   return (
     <Card className="flex flex-col overflow-hidden bg-surface border border-border">
       {/* Calendar Header / Controls */}
-      <div className="flex items-center justify-between p-4 border-b border-border bg-surface-2/50">
-        <div className="flex items-center gap-3">
-          <CalendarIcon className="size-5 text-fg-muted" />
-          <h3 className="text-sm font-semibold text-fg">{dateLabel}</h3>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={goToToday} className="h-8">
-            Today
-          </Button>
-          <div className="flex items-center rounded-md border border-border bg-surface overflow-hidden">
-            <button
-              onClick={prevDay}
-              className="p-1.5 hover:bg-surface-2 text-fg-muted hover:text-fg transition-colors"
-              title="Previous Day"
-            >
-              <ChevronLeft className="size-4" />
-            </button>
-            <div className="w-[1px] h-4 bg-border" />
-            <button
-              onClick={nextDay}
-              className="p-1.5 hover:bg-surface-2 text-fg-muted hover:text-fg transition-colors"
-              title="Next Day"
-            >
-              <ChevronRight className="size-4" />
-            </button>
+      {!hideControls && (
+        <div className="flex items-center justify-between p-4 border-b border-border bg-surface-2/50">
+          <div className="flex items-center gap-3">
+            <CalendarIcon className="size-5 text-fg-muted" />
+            <h3 className="text-sm font-semibold text-fg">{dateLabel}</h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={goToToday} className="h-8">
+              Today
+            </Button>
+            <div className="flex items-center rounded-md border border-border bg-surface overflow-hidden">
+              <button
+                onClick={prevDay}
+                className="p-1.5 hover:bg-surface-2 text-fg-muted hover:text-fg transition-colors"
+                title="Previous Day"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+              <div className="w-[1px] h-4 bg-border" />
+              <button
+                onClick={nextDay}
+                className="p-1.5 hover:bg-surface-2 text-fg-muted hover:text-fg transition-colors"
+                title="Next Day"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="overflow-x-auto">
         <div className="min-w-[1400px]">
@@ -109,8 +136,8 @@ export function FleetDailyCalendar({ vehicles }: FleetDailyCalendarProps) {
               Vehicle
             </div>
             {hoursOfDay.map((hour) => {
-              const currentRealHour = new Date().getHours();
-              const isCurrentHour = dayOffset === 0 && hour === currentRealHour;
+              const now = new Date();
+              const isCurrentHour = currentDate.toDateString() === now.toDateString() && hour === now.getHours();
               return (
                 <div
                   key={hour}
@@ -154,8 +181,8 @@ export function FleetDailyCalendar({ vehicles }: FleetDailyCalendarProps) {
                   {/* Hour Cells */}
                   {hoursOfDay.map((hour) => {
                     const blocked = isBlocked(v, hour);
-                    const currentRealHour = new Date().getHours();
-                    const isCurrentHour = dayOffset === 0 && hour === currentRealHour;
+                    const now = new Date();
+                    const isCurrentHour = currentDate.toDateString() === now.toDateString() && hour === now.getHours();
                     
                     return (
                       <div

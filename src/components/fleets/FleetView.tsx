@@ -469,7 +469,6 @@ export function FleetView() {
               { value: "grid", label: "Grid", icon: <LayoutGrid className="size-3.5" /> },
               { value: "list", label: "List", icon: <Rows3 className="size-3.5" /> },
               { value: "calendar", label: "Weekly", icon: <Calendar className="size-3.5" /> },
-              { value: "daily", label: "Daily", icon: <Clock className="size-3.5" /> },
             ]}
           />
           <Button

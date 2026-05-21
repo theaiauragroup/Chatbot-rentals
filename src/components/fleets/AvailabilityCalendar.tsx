@@ -8,6 +8,7 @@ import { useFleetStore } from "./FleetStore";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { cn, formatDate } from "@/lib/utils";
+import { FleetDailyCalendar } from "./FleetDailyCalendar";
 
 interface AvailabilityCalendarProps {
   vehicle: Vehicle;
@@ -41,6 +42,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
     from: Date | undefined;
     to: Date | undefined;
   }>({ from: undefined, to: undefined });
+  const [viewingHourly, setViewingHourly] = React.useState<Date | null>(null);
   const [editingBlock, setEditingBlock] = React.useState<BookingRange | null>(null);
   const [creating, setCreating] = React.useState<{
     start: string;
@@ -72,8 +74,9 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
     if (range.from && range.to && range.from.getTime() !== range.to.getTime()) {
       setCreating({ start: ymd(range.from), end: ymd(range.to) });
     } else if (range.from && !range.to) {
-      // single-day selection — open create with same day
-      setCreating({ start: ymd(range.from), end: ymd(range.from) });
+      // single-day selection — open hourly view
+      setViewingHourly(range.from);
+      setSelecting({ from: undefined, to: undefined });
     }
   }
 
@@ -204,7 +207,7 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
       {/* Helper + legend */}
       <div className="mt-3 flex items-center justify-between flex-wrap gap-2 text-[11px]">
         <p className="text-fg-subtle">
-          Drag a range to schedule dates · Click an existing schedule to edit
+          Drag a range to schedule dates · Click an empty day for hourly report · Click existing schedule to edit
         </p>
         <ul className="flex items-center gap-3 text-fg-muted">
           <li className="inline-flex items-center gap-1.5">
@@ -221,6 +224,32 @@ export function AvailabilityCalendar({ vehicle }: AvailabilityCalendarProps) {
           </li>
         </ul>
       </div>
+
+      {/* Hourly Report Modal */}
+      <Modal
+        open={!!viewingHourly}
+        onOpenChange={(o) => {
+          if (!o) setViewingHourly(null);
+        }}
+        title={`Hourly Report: ${vehicle.make} ${vehicle.model}`}
+        description={`Schedule for ${viewingHourly?.toLocaleString("default", { weekday: "long", month: "long", day: "numeric" })}`}
+        width="lg"
+        footer={
+          <Button variant="secondary" onClick={() => setViewingHourly(null)}>
+            Close
+          </Button>
+        }
+      >
+        <div className="pt-2">
+          {viewingHourly && (
+            <FleetDailyCalendar 
+              vehicles={[vehicle]} 
+              initialDate={viewingHourly} 
+              hideControls={true} 
+            />
+          )}
+        </div>
+      </Modal>
 
       {/* Create modal */}
       <Modal
